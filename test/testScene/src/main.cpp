@@ -55,7 +55,7 @@ int main() {
     renderer->addLight(light1);*/
 
     // Directional Lighting
-    DirectionalLight light2(glm::vec3(-4, 7, 5.5));
+    DirectionalLight light2(glm::vec3(-5, 3, 5.5));
     light2.setColor(glm::vec3(1));
     renderer->addLight(light2);
 
@@ -80,7 +80,9 @@ int main() {
 
 
     const Model::Ptr dog = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
+    Texture::Ptr dogTexture = Texture::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.mtl");
     const Polytope::Ptr dogPoly = dog->getPolytopes()[0];
+    dogPoly->addTexture(dogTexture);
     dogPoly->setFaceCulling(Polytope::FaceCulling::BACK);
     dogPoly->rotate(-90, glm::vec3(1,0,0));
     dogPoly->scale(glm::vec3(.2));

@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
-#define SHADOW_MAP_WIDTH 1024
-#define SHADOW_MAP_HEIGHT 1024
+#define SHADOW_MAP_WIDTH 2048
+#define SHADOW_MAP_HEIGHT 2048
 
 Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
     : camera(nullptr), 
@@ -482,7 +482,7 @@ void Renderer::renderToDepthMap() {
     depthMapFBO->bind();
 
     // Shaders
-    float nearPlane = 0.1f, farPlane = 17.5f;
+    float nearPlane = 0.1f, farPlane = 57.5f;
     glm::mat4 lightProjection = glm::ortho(-10.f, 10.f, -10.f, 10.f, nearPlane, farPlane);
     glm::mat4 lightView = glm::lookAt(shadowLightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     lightSpaceMatrix = lightProjection * lightView;
