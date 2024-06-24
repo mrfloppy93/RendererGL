@@ -26,7 +26,7 @@ project(testScene)
 
 # Header Files
 set(HEADERS 
-
+    src/ImguiStyles.h
 )
 
 # CPP files
@@ -42,7 +42,7 @@ foreach(filename ${shaderFiles} )
 endforeach()
 
 # Executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${IMGUI_SOURCES} ${IMGUI_HEADERS})
 
 # Linker
 target_link_libraries(${PROJECT_NAME} glfw RendererGL)
