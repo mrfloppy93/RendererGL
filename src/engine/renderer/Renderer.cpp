@@ -496,20 +496,16 @@ void Renderer::renderScenesToDepthMap(std::vector<Scene::Ptr>& scenes) {
                         switch(shadowMappingProcedure) {
                             case 0: {
                                 shaderProgramDepthMap->uniformMat4("model", model);
-                                std::cerr << "renderScenesToDepthMap: Switched to BASE" << std::endl;
                                 break;
                             }
                             case 1: {
                                 shaderProgramDepthMapCSM->uniformMat4("model", model);
-                                std::cerr << "renderScenesToDepthMap: Switched to CSM" << std::endl;
                                 break;
                             }
                             case 2: {
-                                std::cerr << "renderScenesToDepthMap: Switched to PSSM" << std::endl;
                                 break;
                             }
                             case 3: {
-                                std::cerr << "renderScenesToDepthMap: Switched to TSM" << std::endl;
                                 break;
                             }
                         }
