@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
-#define SHADOW_MAP_WIDTH 2048
-#define SHADOW_MAP_HEIGHT 2048
+#define SHADOW_MAP_WIDTH 1024
+#define SHADOW_MAP_HEIGHT 1024
 
 Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
     : camera(nullptr), 
@@ -613,7 +613,7 @@ void Renderer::render() {
 
     frameCapturer->startCapturing();
 
-    enableAntialiasing();
+    //enableAntialiasing();
     enableBlending();
 
     if(hasCamera) {

@@ -55,7 +55,7 @@ int main() {
     renderer->addLight(light1);*/
 
     // Directional Lighting
-    DirectionalLight light2(glm::vec3(-5, 3, 5.5));
+    DirectionalLight light2(glm::vec3(2, 10, 2));//(glm::vec3(-5, 3, 5.5));
     light2.setColor(glm::vec3(1));
     renderer->addLight(light2);
 
