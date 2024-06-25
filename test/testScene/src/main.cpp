@@ -214,20 +214,29 @@ int main() {
                 renderer->setShadowMapping(shadowMapping);
 
                 static int shadowProcedure = 0;
-                if(!shadowMapping) {
-                    shadowProcedure = 0;
+                static bool previousShadowMapping = false;
+                if(previousShadowMapping != shadowMapping) {
+                    if(!shadowMapping) {
+                        shadowProcedure = 0;
+                        renderer->setShadowMappingProcedure(shadowProcedure);
+                    }
+                    previousShadowMapping = shadowMapping;
                 }
+
                 if(ImGui::RadioButton("CSM", shadowProcedure == 1)) {
                     shadowProcedure = 1;
                     // activate CSM, deactivate other procedures
+                    renderer->setShadowMappingProcedure(shadowProcedure);
                 }
                 if(ImGui::RadioButton("PSSM", shadowProcedure == 2)) {
                     shadowProcedure = 2;
                     // activate PSSM, deactivate other procedures
+                    renderer->setShadowMappingProcedure(shadowProcedure);
                 }
                 if(ImGui::RadioButton("TSM", shadowProcedure == 3)) {
                     shadowProcedure = 3;
                     // activate TSM, deactivate other procedures
+                    renderer->setShadowMappingProcedure(shadowProcedure);
                 }
 
                 ImGui::End();
