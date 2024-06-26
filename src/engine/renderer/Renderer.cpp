@@ -11,7 +11,9 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     projection(glm::mat4(1.f)), 
     view(glm::mat4(1.f)), 
     depthMapFBO(0),
-    depthMap(0), 
+    depthMap(0),
+    depthMapFBOs{0,0,0},
+    depthMaps{0,0,0},
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
@@ -66,9 +68,9 @@ void Renderer::initShaders() {
     Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
     shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader);
 
-    Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
+    /*Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
     Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-    shaderProgramDepthMapCSM = ShaderProgram::New(vertexDepthMapShaderCSM, fragmentDepthMapShaderCSM);
+    shaderProgramDepthMapCSM = ShaderProgram::New(vertexDepthMapShaderCSM, fragmentDepthMapShaderCSM);*/
 
     // HDR shader program
     Shader vertexHDRShader = Shader::fromFile("glsl/HDR.vert", Shader::ShaderType::Vertex);
@@ -436,8 +438,8 @@ void Renderer::initHDR() {
 }
 
 
-/*void Renderer::setShadowMappingProcedure(int procedure) {
-    /*switch (procedure) {
+void Renderer::setShadowMappingProcedure(int procedure) {
+    switch (procedure) {
         // BASE
         case 0 : {
             Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
@@ -458,7 +460,7 @@ void Renderer::initHDR() {
         case 2 : {
             /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
             fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);#2#
+            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
             std::cerr << "Switched to PSSM" << std::endl;
             break;
         }
@@ -466,7 +468,7 @@ void Renderer::initHDR() {
         case 3 : {
             /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
             fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);#2#
+            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
             std::cerr << "Switched to TSM" << std::endl;
             break;
         }
@@ -475,8 +477,8 @@ void Renderer::initHDR() {
             setShadowMappingProcedure(0);
             break;
         }
-    }#1#
-}*/
+    }
+}
 
 void Renderer::renderScenesToDepthMap(std::vector<Scene::Ptr>& scenes) {
 
@@ -493,23 +495,7 @@ void Renderer::renderScenesToDepthMap(std::vector<Scene::Ptr>& scenes) {
                         
                         glm::mat4 model = scene->getModelMatrix() * group->getModelMatrix() * polytope->getModelMatrix();
 
-                        switch(shadowMappingProcedure) {
-                            case 0: {
-                                shaderProgramDepthMap->uniformMat4("model", model);
-                                break;
-                            }
-                            case 1: {
-                                shaderProgramDepthMapCSM->uniformMat4("model", model);
-                                break;
-                            }
-                            case 2: {
-                                break;
-                            }
-                            case 3: {
-                                break;
-                            }
-                        }
-
+                        shaderProgramDepthMap->uniformMat4("model", model);
 
                         glCullFace(GL_BACK);
                         polytope->draw(group->getPrimitive(), group->isShowWire());
@@ -551,28 +537,8 @@ void Renderer::renderToDepthMap() {
     glm::mat4 lightView = glm::lookAt(shadowLightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     lightSpaceMatrix = lightProjection * lightView;
 
-    switch(shadowMappingProcedure) {
-        case 0: {
-            shaderProgramDepthMap->useProgram();
-            shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
-            std::cerr << "renderToDepthMap: Switched to BASE" << std::endl;
-            break;
-        }
-        case 1: {
-            shaderProgramDepthMapCSM->useProgram();
-            shaderProgramDepthMapCSM->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
-            std::cerr << "renderToDepthMap: Switched to CSM" << std::endl;
-            break;
-        }
-        case 2: {
-            std::cerr << "renderToDepthMap: Switched to PSSM" << std::endl;
-            break;
-        }
-        case 3: {
-            std::cerr << "renderToDepthMap: Switched to TSM" << std::endl;
-            break;
-        }
-    }
+    shaderProgramDepthMap->useProgram();
+    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
 
     // Draw
     glClear(GL_DEPTH_BUFFER_BIT);

@@ -35,7 +35,6 @@ private:
     ShaderProgram::Ptr shaderProgramLighting;
     ShaderProgram::Ptr shaderProgramPBR;
     ShaderProgram::Ptr shaderProgramDepthMap;
-    ShaderProgram::Ptr shaderProgramDepthMapCSM;
     ShaderProgram::Ptr shaderProgramHDR;
     ShaderProgram::Ptr shaderProgramSkyBox;
     ShaderProgram::Ptr shaderProgramSelection;
@@ -64,7 +63,8 @@ private:
     // Shadow Mapping
     FrameBuffer::Ptr depthMapFBO;
     DepthTexture::Ptr depthMap;
-    int shadowMappingProcedure = 0;
+    FrameBuffer::Ptr depthMapFBOs[];
+    DepthTexture::Ptr depthMaps[];
 
     glm::mat4 lightSpaceMatrix;
     glm::vec3 shadowLightPos;
@@ -188,8 +188,7 @@ public:
 
     inline void setShadowMapping(bool shadowMapping) { this->shadowMapping = shadowMapping; }
     inline bool isShadowMapping() const { return shadowMapping; }
-    //void setShadowMappingProcedure(int);    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
-    inline void setShadowMappingProcedure(const int procedure) { this->shadowMappingProcedure = procedure; }   // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
+    void setShadowMappingProcedure(int);    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
 
     inline ShaderProgram::Ptr& getShaderProgram() { return shaderProgram; }
 
