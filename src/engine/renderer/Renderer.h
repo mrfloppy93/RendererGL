@@ -63,8 +63,8 @@ private:
     // Shadow Mapping
     FrameBuffer::Ptr depthMapFBO;
     DepthTexture::Ptr depthMap;
-    FrameBuffer::Ptr depthMapFBOs[];
-    DepthTexture::Ptr depthMaps[];
+    //FrameBuffer::Ptr depthMapFBOs[];
+    //DepthTexture::Ptr depthMaps[];
 
     glm::mat4 lightSpaceMatrix;
     glm::vec3 shadowLightPos;

@@ -74,29 +74,37 @@ int main() {
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
     // Scene
-    const Model::Ptr teamug = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/teamugblend.obj");
-    const Polytope::Ptr teamugPoly = teamug->getPolytopes()[0];
-    teamugPoly->setFaceCulling(Polytope::FaceCulling::BACK);
-    teamugPoly->translate(glm::vec3(5,5,0));
-
-
     const Model::Ptr dog = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
-    Texture::Ptr dogTexture = Texture::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.mtl");
+    //Texture::Ptr dogTexture = Texture::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.mtl");
     const Polytope::Ptr dogPoly = dog->getPolytopes()[0];
-    dogPoly->addTexture(dogTexture);
+    //dogPoly->addTexture(dogTexture);
     dogPoly->setFaceCulling(Polytope::FaceCulling::BACK);
     dogPoly->rotate(-90, glm::vec3(1,0,0));
     dogPoly->scale(glm::vec3(.2));
 
+    const Model::Ptr dog2 = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
+    const Polytope::Ptr dog2Poly = dog2->getPolytopes()[0];
+    //dogPoly->addTexture(dogTexture);
+    dog2Poly->setFaceCulling(Polytope::FaceCulling::BACK);
+    dog2Poly->translate(glm::vec3(glm::vec3(5,0,10)));
+    dog2Poly->rotate(-30, glm::vec3(0,1,0));
+    dog2Poly->rotate(-90, glm::vec3(1,0,0));
+    dog2Poly->scale(glm::vec3(.3));
+
+    Cube::Ptr cube = Cube::New();
+    cube->translate(glm::vec3(-10,5,-10));
+    cube->scale(glm::vec3(10));
 
     const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
+    groundPoly->scale(glm::vec3(5));
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
 
     Group::Ptr group = Group::New();
-    group->add(teamugPoly);
     group->add(dogPoly);
     group->add(groundPoly);
+    group->add(dog2Poly);
+    group->add(cube);
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
