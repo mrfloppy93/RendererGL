@@ -26,6 +26,7 @@
 #include "SkyBox.h"
 
 #include "FrameCapturer.h"
+#include "TrackballCamera.h"
 
 class Renderer {
     GENERATE_PTR(Renderer)
@@ -47,7 +48,7 @@ private:
     std::vector<Scene::Ptr> scenes;
 
     // Camera
-    Camera::Ptr camera;
+    TrackballCamera::Ptr camera;
     bool hasCamera;
 
     // Lighting
@@ -130,6 +131,14 @@ private:
 
     void loadPreviousFBO();
     void bindPreviousFBO();
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Functions for Cascaded Shadow Mapping
+    std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
+    std::vector<glm::vec4> getFrustumCornersWorldSpace();
+    glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane);
+    glm::mat4 getLightSpaceMatrix();
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);
     void removeLight(Light& light);

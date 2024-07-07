@@ -69,7 +69,7 @@ int main() {
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, 0.1, 1000);
     //camera->setPhi(M_PI / 3 - 0.1);
     //camera->setTheta(M_PI / 4 - 0.1);
-    camera->zoom(-30);
+    camera->zoom(30);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 

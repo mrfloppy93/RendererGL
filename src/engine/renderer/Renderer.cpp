@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+#include "TrackballCamera.h"
+
 #define SHADOW_MAP_WIDTH 1024
 #define SHADOW_MAP_HEIGHT 1024
 
@@ -437,49 +439,6 @@ void Renderer::initHDR() {
     hdrFBO->unbind();
 }
 
-
-void Renderer::setShadowMappingProcedure(int procedure) {
-    switch (procedure) {
-        // BASE
-        case 0 : {
-            Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);
-            std::cerr << "Switched to BASE" << std::endl;
-            break;
-        }
-        // CSM
-        case 1 : {
-            Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShaderCSM,fragmentDepthMapShaderCSM);
-            std::cerr << "Switched to CSM" << std::endl;
-            break;
-        }
-        // PSSM
-        case 2 : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to PSSM" << std::endl;
-            break;
-        }
-        // TSM
-        case 3 : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to TSM" << std::endl;
-            break;
-        }
-        default: {
-            setShadowMapping(false);
-            setShadowMappingProcedure(0);
-            break;
-        }
-    }
-}
-
 void Renderer::renderScenesToDepthMap(std::vector<Scene::Ptr>& scenes) {
 
     for(auto& scene : scenes) {
@@ -769,4 +728,113 @@ void Renderer::loadPreviousFBO() {
 
 void Renderer::bindPreviousFBO() {
     glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Functions for cascaded shadow mapping
+
+void Renderer::setShadowMappingProcedure(int procedure) {
+    switch (procedure) {
+        // BASE
+        case 0 : {
+            Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
+            Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
+            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);
+            std::cerr << "Switched to BASE" << std::endl;
+            break;
+        }
+        // CSM
+        case 1 : {
+            Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
+            Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
+            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShaderCSM,fragmentDepthMapShaderCSM);
+            std::cerr << "Switched to CSM" << std::endl;
+            break;
+        }
+        // PSSM
+        case 2 : {
+            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
+            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
+            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
+            std::cerr << "Switched to PSSM" << std::endl;
+            break;
+        }
+        // TSM
+        case 3 : {
+            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
+            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
+            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
+            std::cerr << "Switched to TSM" << std::endl;
+            break;
+        }
+        default: {
+            setShadowMapping(false);
+            setShadowMappingProcedure(0);
+            break;
+        }
+    }
+}
+
+std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view) {
+    const auto inv = glm::inverse(proj * view);
+
+    std::vector<glm::vec4> frustumCorners;
+    for(int x = 0; x < 2; ++x) {
+        for(int y = 0; y < 2; ++y) {
+            for(int z = 0; z < 2; ++z) {
+                const glm::vec4 pt =
+                    inv * glm::vec4(
+                    2.0f * x - 1.0f,
+                    2.0f * y - 1.0f,
+                    2.0f * z - 1.0f,
+                    1.0f);
+                    frustumCorners.push_back(pt/pt.w);
+            }
+        }
+    }
+    return frustumCorners;
+}
+
+std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace() {
+    return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
+}
+
+glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
+    std::vector<glm::vec4> corners = getFrustumCornersWorldSpace();
+    //calculating lightView-Matrix
+    glm::vec3 center = glm::vec3(0,0,0);
+
+    for(const auto& v: corners) {
+        center += glm::vec3(v);
+    }
+    center /= corners.size();
+    const auto lightView = glm::lookAt(center + shadowLightPos, center, glm::vec3(0.0,1.0,0.0));
+
+    //calculating lightPerspective-Matrix
+    const auto proj = glm::perspective(
+        glm::radians(camera->getRadius()),
+            (float) getViewportWidth()/(float) getViewportHeight(),
+            nearPlane,
+            farPlane);
+
+    float minX = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+    float minY = std::numeric_limits<float>::max();
+    float maxY = std::numeric_limits<float>::lowest();
+    float minZ = std::numeric_limits<float>::max();
+    float maxZ = std::numeric_limits<float>::lowest();
+
+    for(const auto& v: corners) {
+        const auto trf = lightView * v;
+        minX = std::min(minX, trf.x);
+        maxX = std::max(maxX, trf.x);
+        minY = std::min(minY, trf.y);
+        maxY = std::max(maxY, trf.y);
+        minZ = std::min(minZ, trf.z);
+        maxZ = std::max(maxZ, trf.z);
+    }
+}
+
+glm::mat4 Renderer::getLightSpaceMatrix() {
+    return nullptr;
 }
