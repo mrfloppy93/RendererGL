@@ -48,8 +48,9 @@ private:
     std::vector<Scene::Ptr> scenes;
 
     // Camera
-    TrackballCamera::Ptr camera;
+    Camera::Ptr camera;
     bool hasCamera;
+    float cameraNearPlane, cameraFarPlane;
 
     // Lighting
     std::vector<Light*> lights;
@@ -136,8 +137,7 @@ private:
     // Functions for Cascaded Shadow Mapping
     std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
     std::vector<glm::vec4> getFrustumCornersWorldSpace();
-    glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane);
-    glm::mat4 getLightSpaceMatrix();
+    glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);
@@ -178,6 +178,8 @@ public:
     inline std::vector<Scene::Ptr>& getScenes() { return scenes; }
 
     inline Camera::Ptr getCamera() { return camera; }
+    inline float getCameraNearPlane() const { return cameraNearPlane; }
+    inline float getCameraFarPlane() const { return cameraNearPlane; }
 
     inline void enableLight() { hasLight = true; }
     inline void disableLight() { hasLight = false; } 

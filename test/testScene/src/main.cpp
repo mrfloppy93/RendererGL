@@ -56,7 +56,7 @@ int main() {
     renderer->addLight(light1);
 
     // Directional Lighting
-    DirectionalLight light2(glm::vec3(2, 10, 2));//(glm::vec3(-5, 3, 5.5));
+    DirectionalLight light2(glm::vec3(20, 50, 20));//(glm::vec3(-5, 3, 5.5));
     light2.setColor(glm::vec3(1));
     renderer->addLight(light2);
 
@@ -66,10 +66,10 @@ int main() {
 
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
-    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, 0.1, 1000);
-    //camera->setPhi(M_PI / 3 - 0.1);
-    //camera->setTheta(M_PI / 4 - 0.1);
-    camera->zoom(30);
+    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, renderer->getCameraNearPlane(), renderer->getCameraFarPlane());
+    camera->setPhi(5.0);
+    camera->setTheta(2.5);
+    camera->setRadius(60);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
@@ -198,9 +198,9 @@ int main() {
                 static float lz = light2.getPosition().z;
 
                 ImGui::Text("Directional Light position");
-                ImGui::SliderFloat("x", &lx, -50.f, 50.f);
-                ImGui::SliderFloat("y", &ly, -50.f, 50.f);
-                ImGui::SliderFloat("z", &lz, -50.f, 50.f);
+                ImGui::SliderFloat("x", &lx, -100.f, 100.f);
+                ImGui::SliderFloat("y", &ly, -100.f, 100.f);
+                ImGui::SliderFloat("z", &lz, -100.f, 100.f);
 
                 glm::vec3 lightPosition = light2.getPosition();
 
@@ -277,9 +277,9 @@ int main() {
                 ImGui::Separator();
 
                 if (ImGui::Button("Reset camera")) {
-                    camera->setTheta(M_PI_2);
-                    camera->setPhi(2 * M_PI);
-                    camera->setRadius(5.5f);
+                    camera->setTheta(2.5/*M_PI_2*/);
+                    camera->setPhi(5.5/*2 * M_PI*/);
+                    camera->setRadius(60.0f);
                     camera->setCenter(glm::vec3(0, 0, 0));
                     camera->setUp(glm::vec3(0, 1, 0));
                     /*sensitivity = 1.5f;

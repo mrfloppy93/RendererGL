@@ -1,21 +1,23 @@
 #include "Renderer.h"
 
+#include <cmath>
+
 #include "TrackballCamera.h"
 
-#define SHADOW_MAP_WIDTH 1024
-#define SHADOW_MAP_HEIGHT 1024
+#define SHADOW_MAP_WIDTH 2048
+#define SHADOW_MAP_HEIGHT 2048
 
 Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
     : camera(nullptr), 
-    hasCamera(false), 
+    hasCamera(false),
+    cameraNearPlane(0.1),
+    cameraFarPlane(300.0),
     hasLight(false), 
     nLights(0),
     projection(glm::mat4(1.f)), 
     view(glm::mat4(1.f)), 
-    depthMapFBO(0),
-    depthMap(0),
-    //depthMapFBOs{0,0,0},
-    //depthMaps{0,0,0},
+    depthMapFBO(nullptr),
+    depthMap(nullptr),
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
@@ -56,8 +58,8 @@ void Renderer::initShaders() {
     shaderProgram = ShaderProgram::New(vertexShader, fragmentShader);
 
     // Lighting shader program
-    Shader vertexLightingShader = Shader::fromFile("glsl/BlinnPhong.vert", Shader::ShaderType::Vertex);
-    Shader fragmentLightingShader = Shader::fromFile("glsl/BlinnPhong.frag", Shader::ShaderType::Fragment);
+    Shader vertexLightingShader = Shader::fromFile("glsl/SimpleLighting.vert", Shader::ShaderType::Vertex);
+    Shader fragmentLightingShader = Shader::fromFile("glsl/SimpleLighting.frag", Shader::ShaderType::Fragment);
     shaderProgramLighting = ShaderProgram::New(vertexLightingShader, fragmentLightingShader);
 
     // PBR shader program
@@ -491,10 +493,7 @@ void Renderer::renderToDepthMap() {
     depthMapFBO->bind();
 
     // Shaders
-    float nearPlane = 0.1f, farPlane = 57.5f;
-    glm::mat4 lightProjection = glm::ortho(-10.f, 10.f, -10.f, 10.f, nearPlane, farPlane);
-    glm::mat4 lightView = glm::lookAt(shadowLightPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    lightSpaceMatrix = lightProjection * lightView;
+    lightSpaceMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
 
     shaderProgramDepthMap->useProgram();
     shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
@@ -795,12 +794,20 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
     return frustumCorners;
 }
 
+// get frustum corners from camera-frustum
 std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace() {
     return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
 }
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
-    std::vector<glm::vec4> corners = getFrustumCornersWorldSpace();
+    // Calculate field of view from camera-perspective-matrix
+    auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
+    const auto proj = glm::perspective(
+        cameraFovy,
+            (float) getViewportWidth()/(float) getViewportHeight(),
+            nearPlane,
+            farPlane);
+    std::vector<glm::vec4> corners = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
     //calculating lightView-Matrix
     glm::vec3 center = glm::vec3(0,0,0);
 
@@ -808,15 +815,9 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         center += glm::vec3(v);
     }
     center /= corners.size();
-    const auto lightView = glm::lookAt(center + shadowLightPos, center, glm::vec3(0.0,1.0,0.0));
+    const auto lightView = glm::lookAt(center + glm::normalize(shadowLightPos), center, glm::vec3(0.0,1.0,0.0));
 
-    //calculating lightPerspective-Matrix
-    const auto proj = glm::perspective(
-        glm::radians(camera->getRadius()),
-            (float) getViewportWidth()/(float) getViewportHeight(),
-            nearPlane,
-            farPlane);
-
+    //calculating lightProjection-Matrix
     float minX = std::numeric_limits<float>::max();
     float maxX = std::numeric_limits<float>::lowest();
     float minY = std::numeric_limits<float>::max();
@@ -833,8 +834,19 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         minZ = std::min(minZ, trf.z);
         maxZ = std::max(maxZ, trf.z);
     }
-}
 
-glm::mat4 Renderer::getLightSpaceMatrix() {
-    return nullptr;
+    constexpr float zMult = 1.0f;
+    if(minZ < 0) minZ *= zMult;
+    else minZ /= zMult;
+    if(maxZ < 0) maxZ /= zMult;
+    else maxZ *= zMult;
+
+    //std::cout << "minX: " << minX << "\tmaxX: " << maxX << std::endl;
+    //std::cout << "minY: " << minY << "\tmaxY: " << maxY << std::endl;
+    std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
+
+    const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
+
+    return lightProjection * lightView;
+
 }
