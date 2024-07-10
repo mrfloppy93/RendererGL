@@ -843,7 +843,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
 
     //std::cout << "minX: " << minX << "\tmaxX: " << maxX << std::endl;
     //std::cout << "minY: " << minY << "\tmaxY: " << maxY << std::endl;
-    std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
+    //std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
 
     const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
 

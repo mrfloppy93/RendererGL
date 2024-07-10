@@ -51,9 +51,9 @@ int main() {
     renderer->enableLight();
 
     // Point lighting
-    PointLight light1(glm::vec3(2, 10, 2));
+    /*PointLight light1(glm::vec3(2, 10, 2));
     light1.setColor(glm::vec3(.8, .5, .2));
-    renderer->addLight(light1);
+    renderer->addLight(light1);*/
 
     // Directional Lighting
     DirectionalLight light2(glm::vec3(20, 50, 20));//(glm::vec3(-5, 3, 5.5));
@@ -61,7 +61,7 @@ int main() {
     renderer->addLight(light2);
 
     // Shadow Mappint
-    renderer->setShadowMapping(true);
+    renderer->setShadowMapping(false);
     renderer->setShadowLightPos(light2.getPosition());
 
     // Camera
@@ -139,7 +139,7 @@ int main() {
                 ImGui::Checkbox("Enable", &enable);
                 renderer->setLightEnabled(enable);
 
-                ImGui::SameLine();
+                /*ImGui::SameLine();
 
                 static bool enablePointLight = false;
                 bool previousPointLight = enablePointLight;
@@ -152,7 +152,7 @@ int main() {
                         renderer->removeLight(light1);
                     }
                     //previousPointLight = enablePointLight;
-                }
+                }*/
 
 
                 /*static float ambientStrength = light2.getAmbient()[0];
