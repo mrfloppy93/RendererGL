@@ -18,6 +18,7 @@
 #include "engine/lighting/PBRMaterial.h"
 
 #include "engine/texture/DepthTexture.h"
+#include "engine/texture/DepthTexture3D.h"
 #include "engine/texture/ColorBufferTexture.h"
 
 #include "engine/opengl/buffer/FrameBuffer.h"
@@ -30,6 +31,9 @@
 
 class Renderer {
     GENERATE_PTR(Renderer)
+    enum class ShadowMappingProcedure {
+        Simple, CSM, PSSM, TSM
+    };
 private:
     // Shaders
     ShaderProgram::Ptr shaderProgram;
@@ -64,9 +68,8 @@ private:
 
     // Shadow Mapping
     FrameBuffer::Ptr depthMapFBO;
-    DepthTexture::Ptr depthMap;
-    //FrameBuffer::Ptr depthMapFBOs[];
-    //DepthTexture::Ptr depthMaps[];
+    DepthTexture3D::Ptr depthMaps;
+    ShadowMappingProcedure shadowMappingProcedure;
 
     glm::mat4 lightSpaceMatrix;
     glm::vec3 shadowLightPos;
@@ -135,6 +138,7 @@ private:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Functions for Cascaded Shadow Mapping
+    void setShadowMappingProcedure(ShadowMappingProcedure);    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
     std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
     std::vector<glm::vec4> getFrustumCornersWorldSpace();
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
@@ -199,7 +203,6 @@ public:
 
     inline void setShadowMapping(bool shadowMapping) { this->shadowMapping = shadowMapping; }
     inline bool isShadowMapping() const { return shadowMapping; }
-    void setShadowMappingProcedure(int);    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
 
     inline ShaderProgram::Ptr& getShaderProgram() { return shaderProgram; }
 
@@ -213,7 +216,8 @@ public:
     inline void setViewportHeight(unsigned int viewportHeight) { this->viewportHeight = viewportHeight; }
     inline unsigned int getViewportHeight() const { return viewportHeight; }
 
-    inline DepthTexture::Ptr& getDepthMap() { return depthMap; }
+    //inline DepthTexture::Ptr& getDepthMap() { return depthMap; }
+    inline DepthTexture3D::Ptr& getDepthMap3D() { return depthMaps; }
 
     inline void setHDR(bool hdr) { this->hdr = hdr; }
     inline bool isHDR() const { return hdr; }

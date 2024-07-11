@@ -17,7 +17,8 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     projection(glm::mat4(1.f)), 
     view(glm::mat4(1.f)), 
     depthMapFBO(nullptr),
-    depthMap(nullptr),
+    depthMaps(nullptr),
+    shadowMappingProcedure(ShadowMappingProcedure::Simple),
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
@@ -70,6 +71,9 @@ void Renderer::initShaders() {
     // Depth Map shader program
     Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
     Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
+    //Shader vertexDepthMapShader = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
+    //Shader fragmentDepthMapShader = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
+    //Shader geometryDepthMapShader = Shader::fromFile("glsl/CSMDepth.geom", Shader::ShaderType::Geometry);
     shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader);
 
     /*Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
@@ -376,8 +380,8 @@ void Renderer::pbrMVPuniform(const glm::mat4& model) {
 
 void Renderer::shadowMappingUniforms() {
     if(!shadowMapping) return;
-    depthMap->bind();
-    shaderProgramLighting->uniformInt("shadowMap", depthMap->getID() - 1);
+    depthMaps->bind();
+    shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
     shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
 }
@@ -406,19 +410,59 @@ void Renderer::initShadowMapping() {
  
     depthMapFBO = FrameBuffer::New();
 
-    depthMap = DepthTexture::New(SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
-    depthMap->bind();
+    // calculate cascades
+    std::vector<float> shadowCascadeLevels;
+    switch (shadowMappingProcedure) {
+        // BASE
+        case ShadowMappingProcedure::Simple : {
+            shadowCascadeLevels = {cameraFarPlane};
+            break;
+        }
+        // CSM
+        case ShadowMappingProcedure::CSM : {
+            shadowCascadeLevels = {
+                cameraFarPlane / 50.0f, cameraFarPlane / 25.0f, cameraFarPlane / 10.0f, cameraFarPlane / 2.0f
+            };
+            break;
+        }
+        // PSSM
+        case ShadowMappingProcedure::PSSM : {
+
+        }
+        // TSM
+        case ShadowMappingProcedure::TSM : {
+
+        }
+        default: {
+            shadowCascadeLevels = {cameraFarPlane};
+            break;
+        }
+    }
+
+
+    depthMaps = DepthTexture3D::New(SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH, shadowCascadeLevels);
+    depthMaps->bind();
 
     depthMapFBO->bind();
-    depthMapFBO->toTexture(GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap->getID());
+    depthMapFBO->to3DTexture(GL_DEPTH_ATTACHMENT, depthMaps->getID());
 
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
+
+    int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!";
+        throw 0;
+    }
     
     depthMapFBO->unbind();
 
     shaderProgramLighting->useProgram();
-    shaderProgramLighting->uniformInt("shadowMap", depthMap->getID() - 1);
+    shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
+    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
+    shaderProgramDepthMap->useProgram();
+    shaderProgramDepthMap->uniformInt("cascadeCount", shadowCascadeLevels.size());
 }
 
 void Renderer::initHDR() {
@@ -732,10 +776,11 @@ void Renderer::bindPreviousFBO() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions for cascaded shadow mapping
 
-void Renderer::setShadowMappingProcedure(int procedure) {
+void Renderer::setShadowMappingProcedure(ShadowMappingProcedure procedure) {
+    shadowMappingProcedure = procedure;
     switch (procedure) {
         // BASE
-        case 0 : {
+        case ShadowMappingProcedure::Simple : {
             Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
             Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
             shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);
@@ -743,15 +788,16 @@ void Renderer::setShadowMappingProcedure(int procedure) {
             break;
         }
         // CSM
-        case 1 : {
+        case ShadowMappingProcedure::CSM : {
             Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
             Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShaderCSM,fragmentDepthMapShaderCSM);
+            Shader geometryDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.geom", Shader::ShaderType::Geometry);
+            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShaderCSM,fragmentDepthMapShaderCSM, geometryDepthMapShaderCSM);
             std::cerr << "Switched to CSM" << std::endl;
             break;
         }
         // PSSM
-        case 2 : {
+        case ShadowMappingProcedure::PSSM : {
             /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
             fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
             shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
@@ -759,7 +805,7 @@ void Renderer::setShadowMappingProcedure(int procedure) {
             break;
         }
         // TSM
-        case 3 : {
+        case ShadowMappingProcedure::TSM : {
             /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
             fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
             shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
@@ -768,7 +814,7 @@ void Renderer::setShadowMappingProcedure(int procedure) {
         }
         default: {
             setShadowMapping(false);
-            setShadowMappingProcedure(0);
+            setShadowMappingProcedure(ShadowMappingProcedure::Simple);
             break;
         }
     }

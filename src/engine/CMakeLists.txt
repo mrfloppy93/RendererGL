@@ -96,6 +96,8 @@ set(SOURCES
         shapes/Shape.cpp
         shapes/Cube.cpp
         shapes/Sphere.cpp
+        texture/DepthTexture3D.cpp
+        texture/DepthTexture3D.h
 )
 
 # Compile files

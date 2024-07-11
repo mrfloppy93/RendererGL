@@ -16,7 +16,7 @@
 class Shader {
 public:
     enum class ShaderType {
-        None, Vertex, Fragment
+        None, Vertex, Fragment, Geometry
     };
 private:
     std::string code, filePath;
@@ -41,7 +41,7 @@ public:
         return Shader(code, shaderType);
     }
 
-    inline void deleteShader() { glDeleteShader(shaderID); }
+    inline void deleteShader() const { glDeleteShader(shaderID); }
 public:
     inline std::string& getCode() { return code; }
     inline unsigned int getShaderID() const { return shaderID; }
@@ -52,9 +52,10 @@ class ShaderProgram {
     GENERATE_PTR(ShaderProgram)
 private:
     unsigned int shaderProgramID;
-    Shader vertexShader, fragmentShader;
+    Shader vertexShader, fragmentShader, geometryShader;
 public:
-    ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader);
+    //ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader);
+    ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader, const Shader& _geometryShader);
     ShaderProgram();
     ShaderProgram(const ShaderProgram& shaderProgram);
     ShaderProgram(ShaderProgram&& shaderProgram) noexcept;
@@ -69,9 +70,10 @@ public:
     void uniformMat4(const std::string& uniform, const glm::mat4& mat);
     void uniformTextureArray(const std::string& uniform, std::vector<int>& textures);
 public:
-    inline void useProgram() { glUseProgram(shaderProgramID); }
+    inline void useProgram() const { glUseProgram(shaderProgramID); }
     inline unsigned int getShaderProgramID() const { return shaderProgramID; }
     
     inline Shader& getVertexShader() { return vertexShader; }
     inline Shader& getFragmentShader() { return fragmentShader; }
+    inline Shader& getGeometryShader() { return fragmentShader; }
 };
