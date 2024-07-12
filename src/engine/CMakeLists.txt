@@ -98,6 +98,8 @@ set(SOURCES
         shapes/Sphere.cpp
         texture/DepthTexture3D.cpp
         texture/DepthTexture3D.h
+        opengl/buffer/UniformBuffer.cpp
+        opengl/buffer/UniformBuffer.h
 )
 
 # Compile files

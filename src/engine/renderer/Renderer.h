@@ -28,6 +28,7 @@
 
 #include "FrameCapturer.h"
 #include "TrackballCamera.h"
+#include "engine/opengl/buffer/UniformBuffer.h"
 
 class Renderer {
     GENERATE_PTR(Renderer)
@@ -68,8 +69,10 @@ private:
 
     // Shadow Mapping
     FrameBuffer::Ptr depthMapFBO;
+    UniformBuffer::Ptr lightSpaceMatricesUBO;
     DepthTexture3D::Ptr depthMaps;
     ShadowMappingProcedure shadowMappingProcedure;
+    std::vector<float> shadowCascadeLevels;
 
     glm::mat4 lightSpaceMatrix;
     glm::vec3 shadowLightPos;
@@ -138,10 +141,11 @@ private:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Functions for Cascaded Shadow Mapping
-    void setShadowMappingProcedure(ShadowMappingProcedure);    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
+    void updateShadowMappingProcedure();    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
     std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
     std::vector<glm::vec4> getFrustumCornersWorldSpace();
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
+    std::vector<glm::mat4> getLightSpaceMatrices();
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);

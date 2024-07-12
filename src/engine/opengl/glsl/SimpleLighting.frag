@@ -38,6 +38,7 @@ uniform MaterialMaps materialMaps;
 uniform sampler2D diffuseTexture;
 uniform sampler2D shadowMap;
 uniform bool shadowMapping;
+uniform int cascadeCount;
 
 uniform vec3 lightPos;
 
@@ -45,6 +46,28 @@ uniform Light lights[MAX_LIGHTS];
 uniform int nLights;
 
 uniform vec3 viewPos;
+
+vec4 calculateFragPosLightSpace() {
+    // select cascade layer
+    vec4 fragPosViewSpace = view * vec4(fragPosWorldSpace, 1.0);
+    float depthValue = abs(fragPosViewSpace.z);
+
+    int layer = -1;
+    for (int i = 0; i < cascadeCount; ++i)
+    {
+        if (depthValue < cascadePlaneDistances[i])
+        {
+            layer = i;
+            break;
+        }
+    }
+    if (layer == -1)
+    {
+        layer = cascadeCount;
+    }
+
+    vec4 fragPosLightSpace = lightSpaceMatrices[layer] * vec4(fragPosWorldSpace, 1.0);
+}
 
 float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 {
