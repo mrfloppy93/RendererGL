@@ -4,10 +4,11 @@
 
 #include "DepthTexture3D.h"
 
-DepthTexture3D::DepthTexture3D(int _width, int _height, const std::vector<float> &_shadowCascadeLevels) {
+DepthTexture3D::DepthTexture3D(unsigned int _width, unsigned int _height, const std::vector<float> &_shadowCascadeLevels)
+    : Texture(), shadowCascadeLevels(_shadowCascadeLevels)
+{
     width = _width;
     height = _height;
-    shadowCascadeLevels = _shadowCascadeLevels;
     bpp = 1;
     type = Type::TextureDepth;
     generateTexture();

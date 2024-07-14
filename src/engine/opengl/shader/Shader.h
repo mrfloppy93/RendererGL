@@ -54,7 +54,7 @@ private:
     unsigned int shaderProgramID;
     Shader vertexShader, fragmentShader, geometryShader;
 public:
-    //ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader);
+    ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader);
     ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader, const Shader& _geometryShader);
     ShaderProgram();
     ShaderProgram(const ShaderProgram& shaderProgram);

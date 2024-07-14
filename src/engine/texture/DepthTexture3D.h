@@ -9,8 +9,9 @@
 #include <vector>
 
 class DepthTexture3D: public Texture {
+    GENERATE_PTR(DepthTexture3D)
 public:
-    DepthTexture3D(int _width, int _height, const std::vector<float> &_shadowCascadeLevels);
+    DepthTexture3D(unsigned int _width, unsigned int _height, const std::vector<float> &_shadowCascadeLevels);
     DepthTexture3D() = default;
     ~DepthTexture3D() = default;
     void bind() override;

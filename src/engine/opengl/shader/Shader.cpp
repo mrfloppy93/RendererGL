@@ -70,12 +70,12 @@ void Shader::compileShader() {
     }
 }
 
-/*ShaderProgram::ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader)
+ShaderProgram::ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader)
     : vertexShader(_vertexShader), fragmentShader(_fragmentShader), shaderProgramID(0) {
     link();
-}*/
+}
 
-ShaderProgram::ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader, const Shader& _geometryShader = Shader())
+ShaderProgram::ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader, const Shader& _geometryShader)
     : vertexShader(_vertexShader), fragmentShader(_fragmentShader), geometryShader(_geometryShader), shaderProgramID(0) {
     link();
 }

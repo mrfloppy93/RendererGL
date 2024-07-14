@@ -384,8 +384,16 @@ void Renderer::shadowMappingUniforms() {
     if(!shadowMapping) return;
     depthMaps->bind();
     shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
-    shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
+    shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
+    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
+    for(size_t i = 0; i < shadowCascadeLevels.size(); i++)
+    {
+        shaderProgramLighting->uniformFloat("cascadePlaneDistances[" + std::to_string(i) + "]", shadowCascadeLevels[i]);
+    }
+
+
 }
 
 void Renderer::setFaceCulling(const Polytope::Ptr& polytope) {
@@ -462,9 +470,9 @@ void Renderer::initShadowMapping() {
 
 
     // configure shader uniforms
-    shaderProgramLighting->useProgram();
-    shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
-    //shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
+    //shaderProgramLighting->useProgram();
+    //shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
+
 }
 
 void Renderer::initHDR() {
@@ -788,6 +796,11 @@ void Renderer::bindPreviousFBO() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions for cascaded shadow mapping
+
+void Renderer::setShadowMappingProcedure(const ShadowMappingProcedure procedure) {
+    this->shadowMappingProcedure = procedure;
+    updateShadowMappingProcedure();
+}
 
 void Renderer::updateShadowMappingProcedure() {
     switch (shadowMappingProcedure) {

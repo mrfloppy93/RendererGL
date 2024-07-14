@@ -24,6 +24,8 @@ GLFWwindow* window;
 
 Renderer::Ptr renderer;
 
+typedef Renderer::ShadowMappingProcedure ShadowProcedure;
+
 int main() {
 
     // Create window
@@ -221,28 +223,33 @@ int main() {
                 ImGui::Checkbox("Shadow mapping", &shadowMapping);
                 renderer->setShadowMapping(shadowMapping);
 
-                static int shadowProcedure = 0;
+                static ShadowProcedure shadowProcedure = ShadowProcedure::Simple;
                 static bool previousShadowMapping = false;
                 if(previousShadowMapping != shadowMapping) {
                     if(!shadowMapping) {
-                        shadowProcedure = 0;
+                        shadowProcedure = ShadowProcedure::Simple;
                         renderer->setShadowMappingProcedure(shadowProcedure);
                     }
                     previousShadowMapping = shadowMapping;
                 }
 
-                if(ImGui::RadioButton("CSM", shadowProcedure == 1)) {
-                    shadowProcedure = 1;
+                if(ImGui::RadioButton("Simple", shadowProcedure == ShadowProcedure::Simple)) {
+                    shadowProcedure = ShadowProcedure::Simple;
+                    // activate Simple Shadow Mapping, deactivate other procedures
+                    renderer->setShadowMappingProcedure(shadowProcedure);
+                }
+                if(ImGui::RadioButton("CSM", shadowProcedure == ShadowProcedure::CSM)) {
+                    shadowProcedure = ShadowProcedure::CSM;
                     // activate CSM, deactivate other procedures
                     renderer->setShadowMappingProcedure(shadowProcedure);
                 }
-                if(ImGui::RadioButton("PSSM", shadowProcedure == 2)) {
-                    shadowProcedure = 2;
+                if(ImGui::RadioButton("PSSM", shadowProcedure == ShadowProcedure::PSSM)) {
+                    shadowProcedure = ShadowProcedure::PSSM;
                     // activate PSSM, deactivate other procedures
                     renderer->setShadowMappingProcedure(shadowProcedure);
                 }
-                if(ImGui::RadioButton("TSM", shadowProcedure == 3)) {
-                    shadowProcedure = 3;
+                if(ImGui::RadioButton("TSM", shadowProcedure == ShadowProcedure::TSM)) {
+                    shadowProcedure = ShadowProcedure::TSM;
                     // activate TSM, deactivate other procedures
                     renderer->setShadowMappingProcedure(shadowProcedure);
                 }
