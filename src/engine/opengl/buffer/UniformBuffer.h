@@ -17,7 +17,7 @@ public:
 protected:
     void initBuffer() override;
 public:
-    static void setSubdataMat4(const glm::mat4& subdata, int offset);
+    static void setSubdataMat4(const glm::mat4& subdata, size_t offset);
     void bind() override;
     void unbind() override;
 };

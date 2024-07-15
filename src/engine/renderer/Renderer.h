@@ -146,6 +146,7 @@ private:
     std::vector<glm::vec4> getFrustumCornersWorldSpace();
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
     std::vector<glm::mat4> getLightSpaceMatrices();
+    void calculateCascadeLevels();
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);

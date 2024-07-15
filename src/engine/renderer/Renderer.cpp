@@ -15,12 +15,10 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     hasLight(false), 
     nLights(0),
     projection(glm::mat4(1.f)), 
-    view(glm::mat4(1.f)), 
-    depthMapFBO(nullptr),
-    lightSpaceMatricesUBO(nullptr),
+    view(glm::mat4(1.f)),
     depthMaps(nullptr),
     shadowMappingProcedure(ShadowMappingProcedure::Simple),
-    shadowCascadeLevels(cameraFarPlane),
+    shadowCascadeLevels({cameraFarPlane}),
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
@@ -38,6 +36,10 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     initShadowMapping();
     initHDR();
     initTextureQuad();
+
+    // init attributes for shadow mapping that should only be initialized once
+    lightSpaceMatricesUBO = UniformBuffer::New();
+    //
 
     frameCapturer = FrameCapturer::New(viewportWidth, viewportHeight);
 }
@@ -71,12 +73,12 @@ void Renderer::initShaders() {
     shaderProgramPBR = ShaderProgram::New(vertexPBRShader, fragmentPBRShader);
 
     // Depth Map shader program
-    Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-    Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-    //Shader vertexDepthMapShader = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-    //Shader fragmentDepthMapShader = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-    //Shader geometryDepthMapShader = Shader::fromFile("glsl/CSMDepth.geom", Shader::ShaderType::Geometry);
-    shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader);
+    //Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
+    //Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
+    Shader vertexDepthMapShader = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
+    Shader fragmentDepthMapShader = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
+    Shader geometryDepthMapShader = Shader::fromFile("glsl/CSMDepth.geom", Shader::ShaderType::Geometry);
+    shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader, geometryDepthMapShader);
 
     /*Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
     Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
@@ -382,8 +384,8 @@ void Renderer::pbrMVPuniform(const glm::mat4& model) {
 
 void Renderer::shadowMappingUniforms() {
     if(!shadowMapping) return;
-    depthMaps->bind();
-    shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
+    //depthMaps->bind();
+    //shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
     //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
     shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
@@ -392,8 +394,7 @@ void Renderer::shadowMappingUniforms() {
     {
         shaderProgramLighting->uniformFloat("cascadePlaneDistances[" + std::to_string(i) + "]", shadowCascadeLevels[i]);
     }
-
-
+    depthMaps->bind();
 }
 
 void Renderer::setFaceCulling(const Polytope::Ptr& polytope) {
@@ -417,41 +418,13 @@ void Renderer::setViewport(unsigned int viewportWidth, unsigned int viewportHeig
 }
 
 void Renderer::initShadowMapping() {
-
-    if(depthMapFBO == nullptr) depthMapFBO = FrameBuffer::New();
-    if(lightSpaceMatricesUBO == nullptr) lightSpaceMatricesUBO = UniformBuffer::New();
-
+    depthMapFBO = FrameBuffer::New();
     // calculate cascadepositions
-    switch (shadowMappingProcedure) {
-        // BASE
-        case ShadowMappingProcedure::Simple : {
-            shadowCascadeLevels = {cameraFarPlane};
-            break;
-        }
-        // CSM
-        case ShadowMappingProcedure::CSM : {
-            shadowCascadeLevels = {
-                cameraFarPlane / 50.0f, cameraFarPlane / 25.0f, cameraFarPlane / 10.0f, cameraFarPlane / 2.0f
-            };
-            break;
-        }
-        // PSSM
-        case ShadowMappingProcedure::PSSM : {
-
-        }
-        // TSM
-        case ShadowMappingProcedure::TSM : {
-
-        }
-        default: {
-            shadowCascadeLevels = {cameraFarPlane};
-            break;
-        }
-    }
+    calculateCascadeLevels();
 
     // configure depth-map
     depthMaps = DepthTexture3D::New(SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH, shadowCascadeLevels);
-    depthMaps->bind();
+    //depthMaps->bind();
 
     depthMapFBO->bind();
     depthMapFBO->to3DTexture(GL_DEPTH_ATTACHMENT, depthMaps->getID());
@@ -465,14 +438,16 @@ void Renderer::initShadowMapping() {
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!";
         throw 0;
     }
+
     depthMapFBO->unbind();
 
-
-
-    // configure shader uniforms
-    //shaderProgramLighting->useProgram();
-    //shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getID() - 1);
-
+    // don't know why this is needed, maybe it changes something...
+    shaderProgramLighting->useProgram();
+    //shaderProgramLighting->uniformInt("diffuseTexture", 0);
+    /* sets the index of the parameter "shadowMaps" to 1
+     * which means that later on a texture con be bound to that index (the shadowMapsArray)
+     */
+    shaderProgramLighting->uniformInt("shadowMaps", depthMaps->getSlot());
 }
 
 void Renderer::initHDR() {
@@ -550,10 +525,11 @@ void Renderer::renderToDepthMap() {
     }
     lightSpaceMatricesUBO->unbind();
 
-    loadPreviousFBO();
+    //loadPreviousFBO();
+    depthMapFBO->bind();
 
     glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
-    depthMapFBO->bind();
+    //depthMapFBO->bind();
 
     // Shaders
     //lightSpaceMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
@@ -568,7 +544,7 @@ void Renderer::renderToDepthMap() {
 
     renderScenesToDepthMap(scenes);
 
-    bindPreviousFBO();
+    //bindPreviousFBO();
 }
 
 void Renderer::drawGroup(Scene::Ptr& scene, Group::Ptr& group) {
@@ -703,6 +679,8 @@ void Renderer::render() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
+
+
     // Draw scenes
     renderScenes(scenes);
 
@@ -799,7 +777,8 @@ void Renderer::bindPreviousFBO() {
 
 void Renderer::setShadowMappingProcedure(const ShadowMappingProcedure procedure) {
     this->shadowMappingProcedure = procedure;
-    updateShadowMappingProcedure();
+    initShadowMapping();
+    //updateShadowMappingProcedure();
 }
 
 void Renderer::updateShadowMappingProcedure() {
@@ -942,4 +921,33 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
         }
     }
     return ret;
+}
+
+void Renderer::calculateCascadeLevels() {
+    switch (shadowMappingProcedure) {
+        // BASE
+        case ShadowMappingProcedure::Simple : {
+            shadowCascadeLevels = {cameraFarPlane};
+            break;
+        }
+        // CSM
+        case ShadowMappingProcedure::CSM : {
+            shadowCascadeLevels = {
+                cameraFarPlane / 50.0f, cameraFarPlane / 25.0f, cameraFarPlane / 10.0f, cameraFarPlane / 2.0f
+            };
+            break;
+        }
+        // PSSM
+        case ShadowMappingProcedure::PSSM : {
+
+        }
+        // TSM
+        case ShadowMappingProcedure::TSM : {
+
+        }
+        default: {
+            shadowCascadeLevels = {cameraFarPlane};
+            break;
+        }
+    }
 }

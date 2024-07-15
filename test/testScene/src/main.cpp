@@ -69,9 +69,10 @@ int main() {
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, renderer->getCameraNearPlane(), renderer->getCameraFarPlane());
-    camera->setPhi(5.0);
-    camera->setTheta(2.5);
+    //camera->setPhi(5.0);
+    //camera->setTheta(2.5);
     camera->setRadius(60);
+    camera->rotate(2.5, 5.0);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 

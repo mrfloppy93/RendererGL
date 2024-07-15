@@ -109,9 +109,7 @@ void ShaderProgram::link() {
     shaderProgramID = glCreateProgram();
     glAttachShader(shaderProgramID, vertexShader.getShaderID());
     glAttachShader(shaderProgramID, fragmentShader.getShaderID());
-    if(geometryShader.getShaderType() == Shader::ShaderType::Geometry) {
-        glAttachShader(shaderProgramID, fragmentShader.getShaderID());
-    }
+    glAttachShader(shaderProgramID, fragmentShader.getShaderID());
     glLinkProgram(shaderProgramID);
     // Check for linking errors
     int success;

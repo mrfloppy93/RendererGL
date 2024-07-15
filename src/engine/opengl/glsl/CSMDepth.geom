@@ -1,7 +1,7 @@
 #version 460 core
 
-layout(triangles, invocations = 5) in;
-layout(triangle_strip, max_vertices = 3) out;
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 30) out;
 
 layout (std140, binding = 0) uniform LightSpaceMatrices
 {
@@ -12,13 +12,15 @@ uniform int cascadeCount;
 
 void main()
 {
-    for (int i = 0; i < cascadeCount; ++i)
-    //for (int i = 0; i < 3; ++i)
+    for (int layer = 0; layer < cascadeCount; ++layer)
     {
-        gl_Position =
-        lightSpaceMatrices[gl_InvocationID] * gl_in[i].gl_Position;
-        gl_Layer = gl_InvocationID;
-        EmitVertex();
+        for (int i = 0; i < 3; ++i)
+        {
+            gl_Position =
+            lightSpaceMatrices[layer] * gl_in[i].gl_Position;
+            gl_Layer = layer;
+            EmitVertex();
+        }
+        EndPrimitive();
     }
-    EndPrimitive();
 }

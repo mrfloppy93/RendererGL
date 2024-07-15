@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 #define MAX_LIGHTS 64
 
@@ -42,7 +42,7 @@ uniform float farPlane;
 
 uniform sampler2DArray shadowMaps;
 uniform bool shadowMapping;
-layout(std140) uniform LightSpaceMatrices
+layout(std140, binding = 0) uniform LightSpaceMatrices
 {
     mat4 lightSpaceMatrices[16];
 };

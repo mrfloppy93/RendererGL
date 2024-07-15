@@ -22,7 +22,7 @@ void UniformBuffer::initBuffer() {
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, id);
 }
 
-void UniformBuffer::setSubdataMat4(const glm::mat4& subdata, const int offset) {
+void UniformBuffer::setSubdataMat4(const glm::mat4& subdata, const size_t offset) {
     glBufferSubData(GL_UNIFORM_BUFFER, offset * sizeof(glm::mat4x4), sizeof(glm::mat4x4), &subdata);
 }
 
