@@ -905,7 +905,11 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
 
 std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
     std::vector<glm::mat4> ret;
-    for (size_t i = 0; i < shadowCascadeLevels.size() + 1; ++i)
+    if(shadowCascadeLevels.size() == 0) {
+        ret.push_back(getLightSpaceMatrix(cameraNearPlane, cameraFarPlane));
+        return ret;
+    }
+    for (size_t i = 0; i <= shadowCascadeLevels.size(); ++i)
     {
         if (i == 0)
         {
@@ -927,7 +931,9 @@ void Renderer::calculateCascadeLevels() {
     switch (shadowMappingProcedure) {
         // BASE
         case ShadowMappingProcedure::Simple : {
-            shadowCascadeLevels = {cameraFarPlane};
+            shadowCascadeLevels = {
+                //cameraFarPlane
+            };
             break;
         }
         // CSM
