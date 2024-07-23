@@ -30,6 +30,9 @@
 
 class Renderer {
     GENERATE_PTR(Renderer)
+    enum class ShadowMappingProcedure {
+        Simple, CSM, PSSM, TSM
+    };
 private:
     // Shaders
     ShaderProgram::Ptr shaderProgram;
@@ -64,7 +67,11 @@ private:
 
     // Shadow Mapping
     FrameBuffer::Ptr depthMapFBO;
+    FrameBuffer::Ptr depthMapFBO2;
     DepthTexture::Ptr depthMap;
+    DepthTexture::Ptr depthMap2;
+    ShadowMappingProcedure shadowMappingProcedure;
+    std::vector<float> shadowCascadeLevels;
     //FrameBuffer::Ptr depthMapFBOs[];
     //DepthTexture::Ptr depthMaps[];
 
@@ -135,9 +142,12 @@ private:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Functions for Cascaded Shadow Mapping
+    void updateShadowMappingProcedure();    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
     std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
     std::vector<glm::vec4> getFrustumCornersWorldSpace();
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
+    std::vector<glm::mat4> getLightSpaceMatrices();
+    void calculateCascadeLevels();
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);
@@ -171,6 +181,8 @@ public:
 
     void setFaceCulling(const Polytope::Ptr& polytope);
     void setViewport(unsigned int viewportWidth, unsigned int viewportHeight);
+
+    void setShadowMappingProcedure(ShadowMappingProcedure procedure);
 public:
     inline void addScene(Scene::Ptr& scene) { scenes.push_back(scene); }
     inline void removeScene(int index) { scenes.erase(scenes.begin() + index); }
