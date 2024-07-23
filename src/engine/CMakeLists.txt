@@ -54,6 +54,7 @@ set(HEADERS
         lighting/DirectionalLight.h
         lighting/PointLight.h
         texture/vendor/stb_image.h
+        texture/vendor/stb_image_write.h
         texture/Texture.h
         texture/CubeMapTexture.h
         texture/DepthTexture.h
@@ -100,6 +101,7 @@ set(SOURCES
         texture/DepthTexture3D.h
         opengl/buffer/UniformBuffer.cpp
         opengl/buffer/UniformBuffer.h
+        texture/vendor/stb_image_write.h
 )
 
 # Compile files
