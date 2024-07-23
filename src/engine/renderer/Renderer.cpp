@@ -503,6 +503,13 @@ void Renderer::renderToDepthMap() {
 
     renderScenesToDepthMap(scenes);
 
+    // Save the texture to an image file
+    /*if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map.png")) {
+        std::cout << "Image saved successfully!" << std::endl;
+    } else {
+        std::cerr << "Failed to save image." << std::endl;
+    }*/
+
     bindPreviousFBO();
 }
 

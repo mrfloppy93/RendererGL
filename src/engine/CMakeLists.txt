@@ -54,6 +54,7 @@ set(HEADERS
         lighting/DirectionalLight.h
         lighting/PointLight.h
         texture/vendor/stb_image.h
+        texture/vendor/stb_image_write.h
         texture/Texture.h
         texture/CubeMapTexture.h
         texture/DepthTexture.h
@@ -96,6 +97,7 @@ set(SOURCES
         shapes/Shape.cpp
         shapes/Cube.cpp
         shapes/Sphere.cpp
+        texture/vendor/stb_image_write.h
 )
 
 # Compile files

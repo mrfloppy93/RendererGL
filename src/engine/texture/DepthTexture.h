@@ -8,6 +8,7 @@ public:
     DepthTexture(int _width, int _height);
     DepthTexture() = default;
     ~DepthTexture() = default;
+    bool saveDepthTextureToImage(int width, int height, const char* filename);
 private:
     void generateTexture() override;
 };
