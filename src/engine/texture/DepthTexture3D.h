@@ -16,6 +16,7 @@ public:
     ~DepthTexture3D() = default;
     void bind() override;
     void unbind() override;
+    bool saveTextureArrayLayerToFile(int width, int height, int layer, const char* filename);
 private:
     std::vector<float> shadowCascadeLevels;
 

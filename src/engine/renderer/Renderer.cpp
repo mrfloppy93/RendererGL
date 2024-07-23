@@ -544,6 +544,18 @@ void Renderer::renderToDepthMap() {
 
     renderScenesToDepthMap(scenes);
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// some debugging
+    /// write depth maps to file
+
+    for (int layer = 0; layer < 3; ++layer) {
+        std::string filename = "output_layer_" + std::to_string(layer) + ".png";
+        if (!depthMaps->saveTextureArrayLayerToFile(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, layer, filename.c_str())) {
+            std::cerr << "Failed to save texture array layer to file" << std::endl;
+        }
+    }
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     //bindPreviousFBO();
 }
 
