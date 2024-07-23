@@ -1,9 +1,8 @@
 //
 // Created by lukas on 11.07.24.
 //
-#define STB_IMAGE_WRITE
-
 #include "DepthTexture3D.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "vendor/stb_image_write.h"
 
 DepthTexture3D::DepthTexture3D(unsigned int _width, unsigned int _height, const std::vector<float> &_shadowCascadeLevels)
@@ -63,7 +62,7 @@ bool DepthTexture3D::saveTextureArrayLayerToFile(int width, int height, int laye
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     // Attach the specified layer of the texture array to the framebuffer
-    glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, id, 0, layer);
+    glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, id, 0, layer);
 
     // Check if the framebuffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -73,24 +72,28 @@ bool DepthTexture3D::saveTextureArrayLayerToFile(int width, int height, int laye
         return false;
     }
 
-    // Allocate memory to store the texture data
-    GLubyte* pixels = new GLubyte[4 * width * height];
+    // Allocate memory to store the depth data
+    std::vector<float> depthData(width * height);
 
-    // Read the pixels from the framebuffer
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    // Read the depth values from the framebuffer
+    glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, depthData.data());
 
     // Unbind the framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteFramebuffers(1, &fbo);
 
+    // Convert depth values to 8-bit grayscale
+    std::vector<unsigned char> imageData(width * height);
+    for (int i = 0; i < width * height; ++i) {
+        float depthValue = depthData[i];
+        imageData[i] = static_cast<unsigned char>(depthValue * 255.0f);
+    }
+
     // Write the image to a file using stb_image_write
-    if (!stbi_write_png(filename, width, height, 4, pixels, width * 4)) {
+    if (!stbi_write_png(filename, width, height, 1, imageData.data(), width)) {
         std::cerr << "Failed to write image file: " << filename << std::endl;
-        delete[] pixels;
         return false;
     }
 
-    // Free the allocated memory
-    delete[] pixels;
     return true;
 }

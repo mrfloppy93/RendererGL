@@ -229,9 +229,9 @@ int main() {
                 if(previousShadowMapping != shadowMapping) {
                     if(!shadowMapping) {
                         shadowProcedure = ShadowProcedure::Simple;
-                        renderer->setShadowMappingProcedure(shadowProcedure);
                     }
                     previousShadowMapping = shadowMapping;
+                    renderer->setShadowMappingProcedure(shadowProcedure);
                 }
 
                 if(ImGui::RadioButton("Simple", shadowProcedure == ShadowProcedure::Simple)) {
