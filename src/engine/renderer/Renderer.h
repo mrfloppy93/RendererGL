@@ -76,6 +76,7 @@ private:
     //DepthTexture::Ptr depthMaps[];
 
     glm::mat4 lightSpaceMatrix;
+    std::vector<glm::mat4> lightSpaceMatrices;
     glm::vec3 shadowLightPos;
     bool shadowMapping;
 

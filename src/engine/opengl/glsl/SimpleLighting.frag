@@ -8,7 +8,7 @@ in VS_OUT {
     vec3 FragPos;
     vec3 Normal;
     vec2 TexCoords;
-    vec4 FragPosLightSpace;
+    //vec4 FragPosLightSpace;
 } fs_in;
 
 struct Light {
@@ -39,7 +39,7 @@ uniform sampler2D diffuseTexture;
 uniform sampler2D shadowMap;
 uniform sampler2D shadowMap2;
 uniform bool shadowMapping;
-uniform float lightSpaceMatrices[2];
+uniform mat4 lightSpaceMatrices[2];
 uniform float cascadePlaneDistances[1];
 uniform int cascadeCount;
 
@@ -55,13 +55,13 @@ uniform float farPlane;
 float ShadowCalculation(vec3 fragPosWorldSpace, vec3 normal, vec3 lightDir)
 {
 
-    vec4 fragPosLightSpace = lightSpaceMatrices[0] * vec4(fragPosWorldSpace, 1.0);
+    vec4 fragPosLightSpace = lightSpaceMatrices[1] * vec4(fragPosWorldSpace, 1.0);
     // perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     // transform to [0,1] range
     projCoords = projCoords * 0.5 + 0.5;
     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float closestDepth = texture(shadowMap2, projCoords.xy).r;
     // get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
     // check whether current frag pos is in shadow

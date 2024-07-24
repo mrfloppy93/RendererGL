@@ -220,7 +220,7 @@ int main() {
 
                 ImGui::TextColored(ImColor(200, 150, 255), "Shadows");
 
-                static bool shadowMapping = false;
+                static bool shadowMapping = true;
                 ImGui::Checkbox("Shadow mapping", &shadowMapping);
                 renderer->setShadowMapping(shadowMapping);
 
