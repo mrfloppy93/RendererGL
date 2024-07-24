@@ -21,7 +21,7 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     depthMap(nullptr),
     depthMap2(nullptr),
     shadowMappingProcedure(ShadowMappingProcedure::Simple),
-    shadowCascadeLevels({cameraFarPlane/2.0f}),
+    shadowCascadeLevels({cameraFarPlane/5.0f}),
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
@@ -391,10 +391,11 @@ void Renderer::shadowMappingUniforms() {
     shaderProgramLighting->uniformInt("shadowMap2", depthMap2->getID() - 1);
     //depthMap2->unbind();
 
-    shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
     shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
-    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size() + 1);
+    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
+
     for(size_t i = 0; i < shadowCascadeLevels.size(); i++)
     {
         shaderProgramLighting->uniformFloat("cascadePlaneDistances[" + std::to_string(i) + "]", shadowCascadeLevels[i]);
@@ -404,8 +405,8 @@ void Renderer::shadowMappingUniforms() {
     for(size_t i = 0; i < lightSpaceMatrices.size(); i++)
     {
         //shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
-        shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrix);
-        //std::cout << "cascadePlaneDistances[" + std::to_string(i) + "] : " << shadowCascadeLevels[i] << std::endl;
+        shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
+        //std::cout << "lightSpaceMatrices[" + std::to_string(i) + "]" << std::endl;
     }
 
 
@@ -543,8 +544,8 @@ void Renderer::renderToDepthMap() {
 
     lightSpaceMatrices = getLightSpaceMatrices();
 
-    /*for(int i = 0; i < lightMatrices.size(); ++i) {
-        const auto lm = lightMatrices[i];
+    /*for(int i = 0; i < lightSpaceMatrices.size(); ++i) {
+        const auto lm = lightSpaceMatrices[i];
         std::cout << "lightSpaceMatrices[" + std::to_string(i) + "] : " << std::endl;
         for(int m = 0; m < lm.length(); ++m) {
             for(int n = 0; n < lm[m].length(); n++) {
@@ -561,11 +562,11 @@ void Renderer::renderToDepthMap() {
     depthMapFBO->bind();
 
     // Shaders
-    lightSpaceMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
+    //lightSpaceMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
     //lightSpaceMatrix = lightSpaceMatrices[0];
 
     shaderProgramDepthMap->useProgram();
-    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrices[0]);
 
     // Draw
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -589,7 +590,7 @@ void Renderer::renderToDepthMap() {
     //lightSpaceMatrix = lightSpaceMatrices[1];
 
     shaderProgramDepthMap->useProgram();
-    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrices[1]);
 
     // Draw
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -1001,7 +1002,7 @@ void Renderer::calculateCascadeLevels() {
         // BASE
         case ShadowMappingProcedure::Simple : {
             shadowCascadeLevels = {
-                cameraFarPlane/2.0f
+                cameraFarPlane/5.0f
             };
             break;
         }
