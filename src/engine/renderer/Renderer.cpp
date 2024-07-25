@@ -7,21 +7,16 @@
 #define SHADOW_MAP_WIDTH 2048
 #define SHADOW_MAP_HEIGHT 2048
 
-Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
+Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, ShadowMappingProcedure _shadowMappingProcedure)
     : camera(nullptr), 
     hasCamera(false),
-    cameraNearPlane(0.1),
-    cameraFarPlane(300.0),
+    cameraNearPlane(10.0),
+    cameraFarPlane(1000.0),
     hasLight(false), 
     nLights(0),
     projection(glm::mat4(1.f)), 
-    view(glm::mat4(1.f)), 
-    depthMapFBO(nullptr),
-    depthMapFBO2(nullptr),
-    depthMap(nullptr),
-    depthMap2(nullptr),
-    shadowMappingProcedure(ShadowMappingProcedure::Simple),
-    shadowCascadeLevels({cameraFarPlane/5.0f}),
+    view(glm::mat4(1.f)),
+    shadowMappingProcedure(_shadowMappingProcedure),
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
@@ -44,7 +39,7 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
 }
 
 Renderer::Renderer() 
-    : Renderer(0, 0) {
+    : Renderer(0, 0, ShadowMappingProcedure::Simple) {
 }
 
 void Renderer::loadFunctionsGL() {
@@ -381,20 +376,12 @@ void Renderer::pbrMVPuniform(const glm::mat4& model) {
 void Renderer::shadowMappingUniforms() {
     if(!shadowMapping) return;
 
-    depthMap->bind();
-    //shaderProgramLighting->uniformInt("shadowMapLoc", depthMap->getCount());
-    shaderProgramLighting->uniformInt("shadowMap", depthMap->getID() - 1);
-    //depthMap->unbind();
+    for(int i = 0; i < num_cascades; ++i) {
+        depthMapVector[i]->bind();
+        shaderProgramLighting->uniformInt("shadowMap[" + std::to_string(i) + "]", depthMapVector[i]->getID() - 1);
 
-    depthMap2->bind();
-    //shaderProgramLighting->uniformInt("shadowMap2Loc", depthMap->getCount());
-    shaderProgramLighting->uniformInt("shadowMap2", depthMap2->getID() - 1);
-    //depthMap2->unbind();
-
-    //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
-    shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
-    shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
-    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
+        shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
+    }
 
     for(size_t i = 0; i < shadowCascadeLevels.size(); i++)
     {
@@ -402,14 +389,10 @@ void Renderer::shadowMappingUniforms() {
         //std::cout << "cascadePlaneDistances[" + std::to_string(i) + "] : " << shadowCascadeLevels[i] << std::endl;
     }
 
-    for(size_t i = 0; i < lightSpaceMatrices.size(); i++)
-    {
-        //shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
-        shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
-        //std::cout << "lightSpaceMatrices[" + std::to_string(i) + "]" << std::endl;
-    }
-
-
+    //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
+    shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
+    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
 }
 
 void Renderer::setFaceCulling(const Polytope::Ptr& polytope) {
@@ -433,45 +416,31 @@ void Renderer::setViewport(unsigned int viewportWidth, unsigned int viewportHeig
 }
 
 void Renderer::initShadowMapping() {
+    shaderProgramLighting->useProgram();
 
     calculateCascadeLevels();
 
-    depthMapFBO = FrameBuffer::New();
-    // calculate cascadepositions
+    for(int i = 0; i < num_cascades; ++i) {
 
-    depthMap = DepthTexture::New(SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
-    depthMap->bind();
+        depthMapFBOVector.push_back(FrameBuffer::New());
+        depthMapVector.push_back(DepthTexture::New(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT));
 
-    depthMapFBO->bind();
-    depthMapFBO->toTexture(GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap->getID());
+        depthMapVector[i]->bind();
+        depthMapFBOVector[i]->bind();
 
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    
-    depthMapFBO->unbind();
+        depthMapFBOVector[i]->toTexture(
+            GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_2D,
+            depthMapVector[i]->getID()
+            );
 
-    shaderProgramLighting->useProgram();
-    //shaderProgramLighting->uniformInt("shadowMapLoc", depthMap->getCount());
-    shaderProgramLighting->uniformInt("shadowMap", depthMap->getID() - 1);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
 
-    // initialize shadow map 2
-    depthMapFBO2 = FrameBuffer::New();
-    // calculate cascadepositions
+        depthMapFBOVector[i]->unbind();
 
-    depthMap2 = DepthTexture::New(SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
-    depthMap2->bind();
-
-    depthMapFBO2->bind();
-    depthMapFBO2->toTexture(GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap2->getID());
-
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
-    depthMapFBO2->unbind();
-
-    shaderProgramLighting->useProgram();
-    //shaderProgramLighting->uniformInt("shadowMap2Loc", depthMap2->getCount());
-    shaderProgramLighting->uniformInt("shadowMap2", depthMap2->getID() - 1);
+        shaderProgramLighting->uniformInt("shadowMap[" + std::to_string(i) + "]", depthMapVector[i]->getID() - 1);
+    }
 }
 
 void Renderer::initHDR() {
@@ -542,54 +511,21 @@ void Renderer::renderToDepthMap() {
 
     loadPreviousFBO();
 
+    shaderProgramDepthMap->useProgram();
     lightSpaceMatrices = getLightSpaceMatrices();
 
-    /*for(int i = 0; i < lightSpaceMatrices.size(); ++i) {
-        const auto lm = lightSpaceMatrices[i];
-        std::cout << "lightSpaceMatrices[" + std::to_string(i) + "] : " << std::endl;
-        for(int m = 0; m < lm.length(); ++m) {
-            for(int n = 0; n < lm[m].length(); n++) {
-                std::cout << lm[m][n] << "\t";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-    }*/
+    for(int i = 0; i < num_cascades; ++i) {
+        glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+        depthMapFBOVector[i]->bind();
+        shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrices[i]);
 
-    glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
+        // Draw
+        glClear(GL_DEPTH_BUFFER_BIT);
 
-    //pass for shadowmap 1
-    depthMapFBO->bind();
+        renderScenesToDepthMap(scenes);
 
-    // Shaders
-    //lightSpaceMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
-    //lightSpaceMatrix = lightSpaceMatrices[0];
-
-    shaderProgramDepthMap->useProgram();
-    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrices[0]);
-
-    // Draw
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    renderScenesToDepthMap(scenes);
-
-    depthMapFBO->unbind();
-
-    //pass for shadowmap 2
-    glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
-    depthMapFBO2->bind();
-
-    // Shaders
-    //lightSpaceMatrix = lightSpaceMatrices[1];
-
-    shaderProgramDepthMap->useProgram();
-    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrices[1]);
-
-    // Draw
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    renderScenesToDepthMap(scenes);
-    depthMapFBO2->unbind();
+        depthMapFBOVector[i]->unbind();
+    }
 
     bindPreviousFBO();
 }
@@ -819,61 +755,6 @@ void Renderer::bindPreviousFBO() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions for cascaded shadow mapping
-
-void Renderer::setShadowMappingProcedure(const ShadowMappingProcedure procedure) {
-    this->shadowMappingProcedure = procedure;
-    //initShadowMapping();
-    //updateShadowMappingProcedure();
-}
-
-void Renderer::updateShadowMappingProcedure() {
-    switch (shadowMappingProcedure) {
-        // BASE
-        case ShadowMappingProcedure::Simple : {
-            Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);
-            std::cerr << "Switched to BASE" << std::endl;
-            break;
-        }
-        // CSM
-        case ShadowMappingProcedure::CSM : {
-            Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);
-            //Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-            //Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-            //Shader geometryDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.geom", Shader::ShaderType::Geometry);
-            //shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShaderCSM,fragmentDepthMapShaderCSM, geometryDepthMapShaderCSM);
-            std::cerr << "Switched to CSM" << std::endl;
-            break;
-        }
-        // PSSM
-        case ShadowMappingProcedure::PSSM : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to PSSM" << std::endl;
-            break;
-        }
-        // TSM
-        case ShadowMappingProcedure::TSM : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to TSM" << std::endl;
-            break;
-        }
-        default: {
-            setShadowMapping(false);
-            shadowMappingProcedure = ShadowMappingProcedure::Simple;
-            updateShadowMappingProcedure();
-            break;
-        }
-    }
-    //initShadowMapping();
-}
-
 std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view) {
     const auto inv = glm::inverse(proj * view);
 
@@ -936,7 +817,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         maxZ = std::max(maxZ, trf.z);
     }
 
-    constexpr float zMult = 10.0f;
+    constexpr float zMult = 15.0f;
     if(minZ < 0) minZ *= zMult;
     else minZ /= zMult;
     if(maxZ < 0) maxZ /= zMult;
@@ -978,14 +859,14 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
 
 void Renderer::calculateCascadeLevels() {
     switch (shadowMappingProcedure) {
-        // BASE
+        // Simple - No different levels
         case ShadowMappingProcedure::Simple : {
             shadowCascadeLevels = {
-                cameraFarPlane/5.0f
+                //cameraFarPlane/5.0f
             };
             break;
         }
-        // CSM
+        // CSM - Fixed Cascade Levels
         case ShadowMappingProcedure::CSM : {
             shadowCascadeLevels = {
                 cameraFarPlane / 50.0f, cameraFarPlane / 25.0f, cameraFarPlane / 10.0f, cameraFarPlane / 2.0f
@@ -1005,19 +886,17 @@ void Renderer::calculateCascadeLevels() {
             break;
         }
     }
+    num_cascades = shadowCascadeLevels.size() + 1;
 }
 
 void Renderer::takeSnapshot() {
-    // Save the texture to an image file
-    if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map_1.png")) {
-        std::cout << "Image saved successfully!" << std::endl;
-    } else {
-        std::cerr << "Failed to save image." << std::endl;
-    }
-    // Save the texture to an image file
-    if (depthMap2->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map_2.png")) {
-        std::cout << "Image saved successfully!" << std::endl;
-    } else {
-        std::cerr << "Failed to save image." << std::endl;
+    for(int i = 0; i < num_cascades; ++i) {
+        // Save the texture to an image file
+        std::string filename = "depth_map_" + std::to_string(static_cast<int>(getShadowMappingProcedure())) + "_" + std::to_string(i) + ".png";
+        if (depthMapVector[i]->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, filename.c_str())) {
+            std::cout << "Image saved successfully!" << std::endl;
+        } else {
+            std::cerr << "Failed to save image." << std::endl;
+        }
     }
 }

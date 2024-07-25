@@ -1,6 +1,8 @@
 #include "DepthTexture.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <algorithm>
+
 #include "vendor/stb_image_write.h"
 
 DepthTexture::DepthTexture(int _width, int _height) 
@@ -32,6 +34,7 @@ void DepthTexture::generateTexture() {
 }
 
 // Function to save GL_TEXTURE_2D to an image file
+// Gernated with ChatGPT 4.0 in July 2024
 bool DepthTexture::saveDepthTextureToImage(int width, int height, const char* filename) {
     // Bind the texture
     glBindTexture(GL_TEXTURE_2D, id);
@@ -42,9 +45,14 @@ bool DepthTexture::saveDepthTextureToImage(int width, int height, const char* fi
     // Read the depth data from the texture
     glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depthData);
 
+    // Find min and max depth values
+    float minDepth = *std::min_element(depthData, depthData + width * height);
+    float maxDepth = *std::max_element(depthData, depthData + width * height);
+
     // Normalize the depth data to [0, 255] for saving as an image
     unsigned char* image = new unsigned char[width * height];
     for (int i = 0; i < width * height; ++i) {
+        //image[i] = static_cast<unsigned char>((depthData[i] - minDepth) / (maxDepth - minDepth) * 255.0f);
         image[i] = static_cast<unsigned char>(depthData[i] * 255.0f);
     }
 

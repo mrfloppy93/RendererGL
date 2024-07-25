@@ -22,7 +22,8 @@ void renderImGui(ImGuiIO& io);
 
 GLFWwindow* window;
 
-Renderer::Ptr renderer;
+Renderer::Ptr rendererSimple;
+Renderer::Ptr rendererCSM;
 
 typedef Renderer::ShadowMappingProcedure ShadowProcedure;
 
@@ -34,7 +35,9 @@ int main() {
         return -1;
     }
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, "Test Scene", NULL, NULL);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Cascaded Shadow Mapping", NULL, NULL);
+    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     if (!window) glfwTerminate();
 
@@ -47,10 +50,12 @@ int main() {
     initImGui(io);
 
     // Renderer
-    renderer = Renderer::New(WIDTH, HEIGHT);
+    rendererSimple = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::Simple);
+    rendererCSM = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::CSM);
 
     // Lighting
-    renderer->enableLight();
+    rendererSimple->enableLight();
+    rendererCSM->enableLight();
 
     // Point lighting
     /*PointLight light1(glm::vec3(2, 10, 2));
@@ -60,21 +65,25 @@ int main() {
     // Directional Lighting
     DirectionalLight light2(glm::vec3(20, 50, 20));//(glm::vec3(-5, 3, 5.5));
     light2.setColor(glm::vec3(1));
-    renderer->addLight(light2);
+    rendererSimple->addLight(light2);
+    rendererCSM->addLight(light2);
 
     // Shadow Mappint
-    renderer->setShadowMapping(false);
-    renderer->setShadowLightPos(light2.getPosition());
+    rendererSimple->setShadowMapping(true);
+    rendererSimple->setShadowLightPos(light2.getPosition());
+    rendererCSM->setShadowMapping(true);
+    rendererCSM->setShadowLightPos(light2.getPosition());
 
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
-    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, renderer->getCameraNearPlane(), renderer->getCameraFarPlane());
+    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, rendererSimple->getCameraNearPlane(), rendererSimple->getCameraFarPlane());
     //camera->setPhi(5.0);
     //camera->setTheta(2.5);
-    camera->setRadius(60);
+    camera->setRadius(45);
     camera->rotate(2.5, 5.0);
 
-    renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
+    rendererSimple->setCamera(std::dynamic_pointer_cast<Camera>(camera));
+    rendererCSM->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
     // Scene
     const Model::Ptr dog = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
@@ -100,7 +109,7 @@ int main() {
 
     const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
-    groundPoly->scale(glm::vec3(5));
+    //groundPoly->scale(glm::vec3(5));
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
 
     Group::Ptr group = Group::New();
@@ -112,7 +121,8 @@ int main() {
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
 
-    renderer->addScene(scene);
+    rendererSimple->addScene(scene);
+    rendererCSM->addScene(scene);
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -120,8 +130,10 @@ int main() {
         // Update scene
 
         // Draw scene
-        renderer->clear();
-        renderer->render();
+        rendererSimple->clear();
+        rendererSimple->render();
+        rendererCSM->clear();
+        rendererCSM->render();
 
         // ImGUI
         {
@@ -140,7 +152,8 @@ int main() {
 
                 static bool enable = true;
                 ImGui::Checkbox("Enable", &enable);
-                renderer->setLightEnabled(enable);
+                rendererSimple->setLightEnabled(enable);
+                rendererCSM->setLightEnabled(enable);
 
                 /*ImGui::SameLine();
 
@@ -212,7 +225,8 @@ int main() {
                     float dy = ly - lightPosition.y;
                     float dz = lz - lightPosition.z;*/
                     light2.setPosition(glm::vec3(lx, ly, lz));
-                    renderer->setShadowLightPos(light2.getPosition());
+                    rendererSimple->setShadowLightPos(light2.getPosition());
+                    rendererCSM->setShadowLightPos(light2.getPosition());
                     //lightPolytope->translate(glm::vec3(dx, dy, dz));
                 }
 
@@ -222,45 +236,16 @@ int main() {
 
                 static bool shadowMapping = true;
                 ImGui::Checkbox("Shadow mapping", &shadowMapping);
-                renderer->setShadowMapping(shadowMapping);
-
-                static ShadowProcedure shadowProcedure = ShadowProcedure::Simple;
-                static bool previousShadowMapping = false;
-                if(previousShadowMapping != shadowMapping) {
-                    if(!shadowMapping) {
-                        shadowProcedure = ShadowProcedure::Simple;
-                    }
-                    previousShadowMapping = shadowMapping;
-                    renderer->setShadowMappingProcedure(shadowProcedure);
-                }
-
-                if(ImGui::RadioButton("Simple", shadowProcedure == ShadowProcedure::Simple)) {
-                    shadowProcedure = ShadowProcedure::Simple;
-                    // activate Simple Shadow Mapping, deactivate other procedures
-                    renderer->setShadowMappingProcedure(shadowProcedure);
-                }
-                if(ImGui::RadioButton("CSM", shadowProcedure == ShadowProcedure::CSM)) {
-                    shadowProcedure = ShadowProcedure::CSM;
-                    // activate CSM, deactivate other procedures
-                    renderer->setShadowMappingProcedure(shadowProcedure);
-                }
-                if(ImGui::RadioButton("PSSM", shadowProcedure == ShadowProcedure::PSSM)) {
-                    shadowProcedure = ShadowProcedure::PSSM;
-                    // activate PSSM, deactivate other procedures
-                    renderer->setShadowMappingProcedure(shadowProcedure);
-                }
-                if(ImGui::RadioButton("TSM", shadowProcedure == ShadowProcedure::TSM)) {
-                    shadowProcedure = ShadowProcedure::TSM;
-                    // activate TSM, deactivate other procedures
-                    renderer->setShadowMappingProcedure(shadowProcedure);
-                }
+                rendererSimple->setShadowMapping(shadowMapping);
+                rendererCSM->setShadowMapping(shadowMapping);
 
                 ImGui::Separator();
 
                 ImGui::TextColored(ImColor(200, 150, 255), "Snapshot");
 
                 if(ImGui::Button("Take Snapshot")) {
-                    renderer->takeSnapshot();
+                    rendererSimple->takeSnapshot();
+                    rendererCSM->takeSnapshot();
                 }
 
                 ImGui::End();
@@ -328,14 +313,14 @@ int main() {
 
                 ImGui::End();
             }
-            // Render window
+            // Render window - Simple Shadow Mapping
             static bool windowFocus = false;
             {
-                ImGui::Begin("Renderer", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                ImGui::Begin("RendererSimple", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
                 windowFocus = ImGui::IsWindowFocused() || ImGui::IsWindowHovered();
 
                 // Render graphics as a texture
-                ImGui::Image((void*)(intptr_t)renderer->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
+                ImGui::Image((void*)(intptr_t)rendererSimple->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
 
                 // Resize window
                 static ImVec2 previousSize(100, 100);
@@ -571,6 +556,69 @@ int main() {
                         checkPolytopeSelection(pointsIndices, group, mainScene, cubePolytopeIndices);
                     }
                 }*/
+
+                ImGui::End();
+            }
+
+            // Render window - Simple Shadow Mapping
+            //static bool windowFocus = false;
+            {
+                ImGui::Begin("RendererCSM", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                windowFocus = ImGui::IsWindowFocused() || ImGui::IsWindowHovered();
+
+                // Render graphics as a texture
+                ImGui::Image((void*)(intptr_t)rendererCSM->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
+
+                // Resize window
+                static ImVec2 previousSize(100, 100);
+                ImVec2 currentSize = ImGui::GetWindowSize();
+
+                if(currentSize.x != previousSize.x || currentSize.y != previousSize.y) {
+
+                    // Restart trackball camera
+                    float theta = camera->getTheta(), phi = camera->getPhi();
+                    glm::vec3 center = camera->getCenter(), up = camera->getUp();
+                    float radius = camera->getRadius();
+
+                    // Update camera aspect ratio
+                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
+                    camera->setTheta(theta);  camera->setPhi(phi);
+                    camera->setCenter(center); camera->setUp(up);
+                    camera->setRadius(radius);
+
+                    // Restart fps camera
+                    //*fpsCamera = *FPSCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
+                }
+                previousSize = currentSize;
+
+                // Mouse Events
+                ImVec2 size = ImGui::GetWindowSize();
+                ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
+                ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
+                ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, mousePositionAbsolute.y - screenPositionAbsolute.y);
+
+                static bool first = true;
+                static ImVec2 previous(0, 0);
+
+                if(ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+                    if(first) {
+                        previous = mousePositionRelative;
+                        first = false;
+                    }
+                }else first = true;
+
+                // Camera rotation
+                float sensitivity = 5.0;
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Left) && windowFocus) {
+                    float dTheta = (mousePositionRelative.x - previous.x) / size.x;
+                    float dPhi = (mousePositionRelative.y - previous.y) / size.y;
+                    previous = mousePositionRelative;
+                    camera->rotate(-dTheta * sensitivity, dPhi * sensitivity);
+                }
+
+                // Camera zoom
+                float zoomSensitivity = 5.0;
+                if(windowFocus) camera->zoom(ImGui::GetIO().MouseWheel * zoomSensitivity);
 
                 ImGui::End();
             }

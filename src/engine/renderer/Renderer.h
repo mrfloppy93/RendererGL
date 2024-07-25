@@ -33,6 +33,7 @@ class Renderer {
     enum class ShadowMappingProcedure {
         Simple, CSM, PSSM, TSM
     };
+
 private:
     // Shaders
     ShaderProgram::Ptr shaderProgram;
@@ -66,14 +67,11 @@ private:
     int previousFBO;
 
     // Shadow Mapping
-    FrameBuffer::Ptr depthMapFBO;
-    FrameBuffer::Ptr depthMapFBO2;
-    DepthTexture::Ptr depthMap;
-    DepthTexture::Ptr depthMap2;
+    std::vector<FrameBuffer::Ptr> depthMapFBOVector;
+    std::vector<DepthTexture::Ptr> depthMapVector;
     ShadowMappingProcedure shadowMappingProcedure;
     std::vector<float> shadowCascadeLevels;
-    //FrameBuffer::Ptr depthMapFBOs[];
-    //DepthTexture::Ptr depthMaps[];
+    int num_cascades;
 
     glm::mat4 lightSpaceMatrix;
     std::vector<glm::mat4> lightSpaceMatrices;
@@ -103,7 +101,7 @@ private:
     FrameCapturer::Ptr frameCapturer;
 
 public:
-    Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight);
+    Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, ShadowMappingProcedure _shadowMappingProcedure);
     Renderer();
     ~Renderer() = default;
 private:
@@ -143,7 +141,6 @@ private:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Functions for Cascaded Shadow Mapping
-    void updateShadowMappingProcedure();    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
     std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
     std::vector<glm::vec4> getFrustumCornersWorldSpace();
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
@@ -183,7 +180,6 @@ public:
     void setFaceCulling(const Polytope::Ptr& polytope);
     void setViewport(unsigned int viewportWidth, unsigned int viewportHeight);
 
-    void setShadowMappingProcedure(ShadowMappingProcedure procedure);
     void takeSnapshot();
 public:
     inline void addScene(Scene::Ptr& scene) { scenes.push_back(scene); }
@@ -212,8 +208,8 @@ public:
     inline glm::vec3& getShadowLightPos() { return shadowLightPos; }
 
     inline void setShadowMapping(bool shadowMapping) { this->shadowMapping = shadowMapping; }
+    inline ShadowMappingProcedure getShadowMappingProcedure() { return shadowMappingProcedure; }
     inline bool isShadowMapping() const { return shadowMapping; }
-    void setShadowMappingProcedure(int);    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
 
     inline ShaderProgram::Ptr& getShaderProgram() { return shaderProgram; }
 
@@ -227,7 +223,7 @@ public:
     inline void setViewportHeight(unsigned int viewportHeight) { this->viewportHeight = viewportHeight; }
     inline unsigned int getViewportHeight() const { return viewportHeight; }
 
-    inline DepthTexture::Ptr& getDepthMap() { return depthMap; }
+    inline std::vector<DepthTexture::Ptr>& getDepthMaps() { return depthMapVector; }
 
     inline void setHDR(bool hdr) { this->hdr = hdr; }
     inline bool isHDR() const { return hdr; }

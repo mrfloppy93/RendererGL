@@ -36,11 +36,10 @@ struct MaterialMaps {
 uniform MaterialMaps materialMaps;
 
 uniform sampler2D diffuseTexture;
-uniform sampler2D shadowMap;
-uniform sampler2D shadowMap2;
 uniform bool shadowMapping;
-uniform mat4 lightSpaceMatrices[2];
-uniform float cascadePlaneDistances[1];
+uniform sampler2D shadowMap[16];
+uniform mat4 lightSpaceMatrices[16];
+uniform float cascadePlaneDistances[16];
 uniform int cascadeCount; // number of frusta - 1
 
 uniform vec3 lightPos;
@@ -51,26 +50,6 @@ uniform int nLights;
 uniform vec3 viewPos;
 uniform mat4 view;
 uniform float farPlane;
-
-/*float ShadowCalculation(vec3 fragPosWorldSpace, vec3 normal, vec3 lightDir)
-{
-
-    vec4 fragPosLightSpace = lightSpaceMatrices[1] * vec4(fragPosWorldSpace, 1.0);
-    // perform perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadowMap2, projCoords.xy).r;
-    // get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // check whether current frag pos is in shadow
-    float bias = max(0.003 * (1.0 - dot(normal, lightDir)), 0.0005);
-    float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
-    //float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
-
-    return shadow;
-}*/
 
 int getCascadeLayer(vec3 fragPosWorldSpace) {
     // select cascade layer
@@ -103,11 +82,38 @@ float ShadowCalculation(vec3 fragPosWorldSpace, vec3 normal, vec3 lightDir)
     // transform to [0,1] range
     projCoords = projCoords * 0.5 + 0.5;
     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
+
     float closestDepth;
-    if(layer == 0) {
-        closestDepth = texture(shadowMap, projCoords.xy).r;
-    } else {
-        closestDepth = texture(shadowMap2, projCoords.xy).r;
+
+    switch(layer) {
+        case 0: {
+                    closestDepth = texture(shadowMap[0], projCoords.xy).r;
+                    break;
+                }
+        case 1: {
+                    closestDepth = texture(shadowMap[1], projCoords.xy).r;
+                    break;
+                }
+        case 2: {
+                    closestDepth = texture(shadowMap[2], projCoords.xy).r;
+                    break;
+                }
+        case 3: {
+                    closestDepth = texture(shadowMap[3], projCoords.xy).r;
+                    break;
+                }
+        case 4: {
+                    closestDepth = texture(shadowMap[4], projCoords.xy).r;
+                    break;
+                }
+        case 5: {
+                    closestDepth = texture(shadowMap[5], projCoords.xy).r;
+                    break;
+                }
+        default:{
+                    closestDepth = texture(shadowMap[0], projCoords.xy).r;
+                    break;
+                }
     }
     // get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
@@ -140,12 +146,39 @@ void main()
 {
     Light light = lights[0];
     //vec3 color = texture(diffuseTexture, fs_in.TexCoords).rgb;
-    vec3 color = vec3(1.0);//texture(materialMaps.diffuseMap, fs_in.TexCoords).rgb;
-    if(getCascadeLayer(fs_in.FragPos) == 0) {
-        color = vec3(1.0,0.5,0.5);
-    } else {
-        color = vec3(0.5,1.0,0.5);
+    vec3 color;//texture(materialMaps.diffuseMap, fs_in.TexCoords).rgb;
+
+    switch(getCascadeLayer(fs_in.FragPos)) {
+    case 0: {
+            color = vec3(1.0,0.5,0.5);
+            break;
+            }
+    case 1: {
+            color = vec3(0.5,1.0,0.5);
+            break;
+            }
+    case 2: {
+            color = vec3(0.5,0.5,1.0);
+            break;
+            }
+    case 3: {
+            color = vec3(0.8,0.8,0.0);
+            break;
+            }
+    case 4: {
+            color = vec3(0.8,0.0,0.8);
+            break;
+            }
+    case 5: {
+            color = vec3(0.0,0.8,0.8);
+            break;
+            }
+    default:{
+            color = vec3(1.0);
+            break;
+            }
     }
+
     vec3 normal = normalize(fs_in.Normal);
     vec3 lightColor = light.color;
     // ambient
