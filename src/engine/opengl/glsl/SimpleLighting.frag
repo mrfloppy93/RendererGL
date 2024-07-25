@@ -118,9 +118,9 @@ float ShadowCalculation(vec3 fragPosWorldSpace, vec3 normal, vec3 lightDir)
     }
 
     // check whether current frag pos is in shadow
-    float bias = max(0.003 * (1.0 - dot(normal, lightDir)), 0.0005);
+    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
     // calculate bias (based on depth map resolution and slope)
-    const float biasModifier = 0.001f;
+    const float biasModifier = 0.5f;
     if (layer == cascadeCount)
     {
         bias *= 1 / (farPlane * biasModifier);

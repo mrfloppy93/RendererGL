@@ -184,6 +184,7 @@ public:
     void setViewport(unsigned int viewportWidth, unsigned int viewportHeight);
 
     void setShadowMappingProcedure(ShadowMappingProcedure procedure);
+    void takeSnapshot();
 public:
     inline void addScene(Scene::Ptr& scene) { scenes.push_back(scene); }
     inline void removeScene(int index) { scenes.erase(scenes.begin() + index); }

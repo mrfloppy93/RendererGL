@@ -575,13 +575,6 @@ void Renderer::renderToDepthMap() {
 
     depthMapFBO->unbind();
 
-    // Save the texture to an image file
-    /*if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map_1.png")) {
-        std::cout << "Image saved successfully!" << std::endl;
-    } else {
-        std::cerr << "Failed to save image." << std::endl;
-    }*/
-
     //pass for shadowmap 2
     glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
     depthMapFBO2->bind();
@@ -597,20 +590,6 @@ void Renderer::renderToDepthMap() {
 
     renderScenesToDepthMap(scenes);
     depthMapFBO2->unbind();
-
-    // Save the texture to an image file
-    /*if (depthMap2->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map_2.png")) {
-        std::cout << "Image saved successfully!" << std::endl;
-    } else {
-        std::cerr << "Failed to save image." << std::endl;
-    }*/
-
-    // Save the texture to an image file
-    /*if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map.png")) {
-        std::cout << "Image saved successfully!" << std::endl;
-    } else {
-        std::cerr << "Failed to save image." << std::endl;
-    }*/
 
     bindPreviousFBO();
 }
@@ -957,7 +936,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         maxZ = std::max(maxZ, trf.z);
     }
 
-    constexpr float zMult = 1.0f;
+    constexpr float zMult = 10.0f;
     if(minZ < 0) minZ *= zMult;
     else minZ /= zMult;
     if(maxZ < 0) maxZ /= zMult;
@@ -1025,5 +1004,20 @@ void Renderer::calculateCascadeLevels() {
             shadowCascadeLevels = {cameraFarPlane};
             break;
         }
+    }
+}
+
+void Renderer::takeSnapshot() {
+    // Save the texture to an image file
+    if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map_1.png")) {
+        std::cout << "Image saved successfully!" << std::endl;
+    } else {
+        std::cerr << "Failed to save image." << std::endl;
+    }
+    // Save the texture to an image file
+    if (depthMap2->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map_2.png")) {
+        std::cout << "Image saved successfully!" << std::endl;
+    } else {
+        std::cerr << "Failed to save image." << std::endl;
     }
 }

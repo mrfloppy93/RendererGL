@@ -255,6 +255,14 @@ int main() {
                     renderer->setShadowMappingProcedure(shadowProcedure);
                 }
 
+                ImGui::Separator();
+
+                ImGui::TextColored(ImColor(200, 150, 255), "Snapshot");
+
+                if(ImGui::Button("Take Snapshot")) {
+                    renderer->takeSnapshot();
+                }
+
                 ImGui::End();
             }
 
