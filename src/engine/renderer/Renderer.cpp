@@ -11,7 +11,7 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, Sh
     : camera(nullptr), 
     hasCamera(false),
     cameraNearPlane(10.0),
-    cameraFarPlane(1000.0),
+    cameraFarPlane(300.0),
     hasLight(false), 
     nLights(0),
     projection(glm::mat4(1.f)), 
@@ -773,19 +773,24 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
         }
     }
     return frustumCorners;
+
+
 }
 
 // get frustum corners from camera-frustum
 std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace() {
-    return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
+return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
 }
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
+    if(camera->getType() == Camera::CameraType::Trackball) {
+        cameraFovy = glm::radians(dynamic_cast<TrackballCamera*>(camera.get())->getRadius());
+    }
     const auto proj = glm::perspective(
-        cameraFovy,
+            cameraFovy,
             (float) getViewportWidth()/(float) getViewportHeight(),
             nearPlane,
             farPlane);
@@ -817,7 +822,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         maxZ = std::max(maxZ, trf.z);
     }
 
-    constexpr float zMult = 15.0f;
+    constexpr float zMult = 10.0f;
     if(minZ < 0) minZ *= zMult;
     else minZ /= zMult;
     if(maxZ < 0) maxZ /= zMult;
@@ -869,7 +874,7 @@ void Renderer::calculateCascadeLevels() {
         // CSM - Fixed Cascade Levels
         case ShadowMappingProcedure::CSM : {
             shadowCascadeLevels = {
-                cameraFarPlane / 50.0f, cameraFarPlane / 25.0f, cameraFarPlane / 10.0f, cameraFarPlane / 2.0f
+                cameraFarPlane / 10.0f, cameraFarPlane / 5.0f, cameraFarPlane / 2.0f
             };
             break;
         }

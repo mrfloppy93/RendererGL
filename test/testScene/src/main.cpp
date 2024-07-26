@@ -1,6 +1,7 @@
 //
 // Created by lukas on 24.06.24.
 //
+#include <chrono>
 #include <iostream>
 #include <vector>
 
@@ -77,9 +78,7 @@ int main() {
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, rendererSimple->getCameraNearPlane(), rendererSimple->getCameraFarPlane());
-    //camera->setPhi(5.0);
-    //camera->setTheta(2.5);
-    camera->setRadius(45);
+    camera->zoom(-60);
     camera->rotate(2.5, 5.0);
 
     rendererSimple->setCamera(std::dynamic_pointer_cast<Camera>(camera));
@@ -107,19 +106,27 @@ int main() {
     cube->translate(glm::vec3(-10,5,-10));
     cube->scale(glm::vec3(10));
 
-    const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
+    const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/fbx/Forest.fbx");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
-    //groundPoly->scale(glm::vec3(5));
+    groundPoly->scale(glm::vec3(10));
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
+
+    const Model::Ptr wizard = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/wizard.obj");
+    const Polytope::Ptr wizardPoly = wizard->getPolytopes()[0];
+    wizardPoly->setFaceCulling(Polytope::FaceCulling::NONE);
+    wizardPoly->translate(glm::vec3(0.0,3.5,0.0));
+    wizardPoly->scale(glm::vec3(1.5));
 
     Group::Ptr group = Group::New();
     group->add(dogPoly);
     group->add(groundPoly);
     group->add(dog2Poly);
     group->add(cube);
+    group->add(wizardPoly);
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
+    //scene->addModel(canyon);
 
     rendererSimple->addScene(scene);
     rendererCSM->addScene(scene);
@@ -127,13 +134,15 @@ int main() {
     // Main loop
     while (!glfwWindowShouldClose(window)) {
 
-        // Update scene
-
         // Draw scene
         rendererSimple->clear();
+        auto start_simple = std::chrono::high_resolution_clock::now();
         rendererSimple->render();
+        auto stop_simple = std::chrono::high_resolution_clock::now();
         rendererCSM->clear();
+        auto start_csm = std::chrono::high_resolution_clock::now();
         rendererCSM->render();
+        auto stop_csm = std::chrono::high_resolution_clock::now();
 
         // ImGUI
         {
@@ -319,6 +328,10 @@ int main() {
                 ImGui::Begin("RendererSimple", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
                 windowFocus = ImGui::IsWindowFocused() || ImGui::IsWindowHovered();
 
+                auto duration_simple = std::chrono::duration_cast<std::chrono::microseconds>(stop_simple - start_simple).count();
+
+                ImGui::Text("FPS: %d µs/frame (%.1f FPS)", duration_simple, 1000000.0/(float)duration_simple);
+
                 // Render graphics as a texture
                 ImGui::Image((void*)(intptr_t)rendererSimple->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
 
@@ -334,7 +347,7 @@ int main() {
                     float radius = camera->getRadius();
 
                     // Update camera aspect ratio
-                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
+                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 10, 10000);
                     camera->setTheta(theta);  camera->setPhi(phi);
                     camera->setCenter(center); camera->setUp(up);
                     camera->setRadius(radius);
@@ -566,6 +579,10 @@ int main() {
                 ImGui::Begin("RendererCSM", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
                 windowFocus = ImGui::IsWindowFocused() || ImGui::IsWindowHovered();
 
+                auto duration_csm = std::chrono::duration_cast<std::chrono::microseconds>(stop_csm - start_csm).count();
+
+                ImGui::Text("FPS: %d µs/frame (%.1f FPS)", duration_csm, 1000000.0/(float)duration_csm);
+
                 // Render graphics as a texture
                 ImGui::Image((void*)(intptr_t)rendererCSM->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
 
@@ -581,10 +598,10 @@ int main() {
                     float radius = camera->getRadius();
 
                     // Update camera aspect ratio
-                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
+                    /**camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
                     camera->setTheta(theta);  camera->setPhi(phi);
                     camera->setCenter(center); camera->setUp(up);
-                    camera->setRadius(radius);
+                    camera->setRadius(radius);*/
 
                     // Restart fps camera
                     //*fpsCamera = *FPSCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
@@ -676,7 +693,7 @@ void dockSpace(bool* p_open) {
         ImGui::SetNextWindowViewport(viewport->ID);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+        //window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
         window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     }
     else dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;

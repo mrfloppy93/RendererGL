@@ -52,8 +52,8 @@ bool DepthTexture::saveDepthTextureToImage(int width, int height, const char* fi
     // Normalize the depth data to [0, 255] for saving as an image
     unsigned char* image = new unsigned char[width * height];
     for (int i = 0; i < width * height; ++i) {
-        //image[i] = static_cast<unsigned char>((depthData[i] - minDepth) / (maxDepth - minDepth) * 255.0f);
-        image[i] = static_cast<unsigned char>(depthData[i] * 255.0f);
+        image[i] = static_cast<unsigned char>((depthData[i] - minDepth) / (maxDepth - minDepth) * 255.0f);
+        //image[i] = static_cast<unsigned char>(depthData[i] * 255.0f);
     }
 
     // Write the image using stb_image_write
