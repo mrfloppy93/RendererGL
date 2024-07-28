@@ -11,7 +11,11 @@
 
 #include <GLFW/glfw3.h>
 #include "ImguiStyles.h"
+#include "engine/renderer/FPSCamera.h"
 #include "imgui/imgui_internal.h"
+
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 1000
 
 const int WIDTH = 1280;
 const int HEIGHT = 900;
@@ -21,10 +25,30 @@ void initImGui(ImGuiIO& io);
 void dockSpace(bool* p_open);
 void renderImGui(ImGuiIO& io);
 
+// Window callbacks
+static void resizeCallback(GLFWwindow* w, int width, int height);
+static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
+// Camera functions
+void updateFPSCamera(double xpos, double ypos);
+
 GLFWwindow* window;
 
 Renderer::Ptr rendererSimple;
 Renderer::Ptr rendererCSM;
+
+// TrackBallCamera
+TrackballCamera::Ptr camera;
+
+// FPS camera
+FPSCamera::Ptr fpsCamera;
+bool movementForward = false, movementBackward = false;
+bool movementRight = false, movementLeft = false;
+
+// Mouse Ray casting (gui)
+bool enablePoint3d = false, enableDrawRay = false;
+bool enableObjectSelecting = false;
+float rayLong = 100;
 
 typedef Renderer::ShadowMappingProcedure ShadowProcedure;
 
@@ -54,6 +78,20 @@ int main() {
     rendererSimple = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::Simple);
     rendererCSM = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::CSM);
 
+    // Camera
+    double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
+    float sensitivity = 1.5f, panSensitivity = 1.0f, zoomSensitivity = 1.0f;
+    camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
+    camera->zoom(-60);
+    camera->rotate(2.5, 5.0);
+
+    // First Person Shooter Camera
+    fpsCamera = FPSCamera::perspectiveCamera(glm::radians(45.0f), WIDTH / HEIGHT, NEAR_PLANE, FAR_PLANE);
+    fpsCamera->setSensitivity(sensitivity / 10);
+
+    rendererSimple->setCamera(std::dynamic_pointer_cast<Camera>(camera));
+    rendererCSM->setCamera(std::dynamic_pointer_cast<Camera>(camera));
+
     // Lighting
     rendererSimple->enableLight();
     rendererCSM->enableLight();
@@ -69,20 +107,13 @@ int main() {
     rendererSimple->addLight(light2);
     rendererCSM->addLight(light2);
 
-    // Shadow Mappint
+    // Shadow Mapping
     rendererSimple->setShadowMapping(true);
     rendererSimple->setShadowLightPos(light2.getPosition());
     rendererCSM->setShadowMapping(true);
     rendererCSM->setShadowLightPos(light2.getPosition());
 
-    // Camera
-    double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
-    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, rendererSimple->getCameraNearPlane(), rendererSimple->getCameraFarPlane());
-    camera->zoom(-60);
-    camera->rotate(2.5, 5.0);
 
-    rendererSimple->setCamera(std::dynamic_pointer_cast<Camera>(camera));
-    rendererCSM->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
     // Scene
     const Model::Ptr dog = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
@@ -106,7 +137,7 @@ int main() {
     cube->translate(glm::vec3(-10,5,-10));
     cube->scale(glm::vec3(10));
 
-    const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/fbx/Forest.fbx");
+    const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
     groundPoly->scale(glm::vec3(10));
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
@@ -153,34 +184,136 @@ int main() {
             bool p_open = true;
             dockSpace(&p_open);
 
+            // Window
+            {
+                static float f = 0.0f;
+                static int counter = 0;
+                ImGui::Begin("Main Window");
+                ImGui::TextColored(ImColor(200, 150, 255), "Main window controls");
+
+                ImGui::Separator();
+
+                static bool groupVisible = group->isVisible();
+                ImGui::Checkbox("Show group", &groupVisible);
+                group->setVisible(groupVisible);
+
+                ImGui::SameLine();
+
+                static bool showWire = group->isShowWire();
+                ImGui::Checkbox("Show wire", &showWire);
+                group->setShowWire(showWire);
+                model->setShowWire(showWire);
+
+                ImGui::SameLine();
+
+                static bool showGrid = groupGrid->isVisible();
+                ImGui::Checkbox("Show grid", &showGrid);
+                groupGrid->setVisible(showGrid);
+
+                ImGui::SameLine();
+
+                static bool showSkyBox = true;
+                ImGui::Checkbox("Skybox", &showSkyBox);
+                if(!showSkyBox) renderer->setSkyBox(nullptr);
+                else renderer->setSkyBox(skyBox);
+
+                static bool showLights = lightsGroup->isVisible();
+                ImGui::Checkbox("Show lights", &showLights);
+                lightsGroup->setVisible(showLights);
+
+                ImGui::SameLine();
+
+                static bool emission = true;
+                bool tempEmission = emission;
+                ImGui::Checkbox("Emission", &emission);
+                if(tempEmission != emission) {
+                    if(!emission) {
+                        textureEmission->setType(Texture::Type::None);
+                        textureEmissionRed->setType(Texture::Type::None);
+                    }
+                    else {
+                        textureEmission->setType(Texture::Type::TextureEmission);
+                        textureEmissionRed->setType(Texture::Type::TextureEmission);
+                    }
+                }
+
+                ImGui::SameLine();
+
+                if(ImGui::Button("Red emission")) {
+                    cubePolytope2->removeTexture(textureEmission);
+                    cubePolytope2->addTexture(textureEmissionRed);
+                }
+
+                ImGui::SameLine();
+
+                if(ImGui::Button("White emission")) {
+                    cubePolytope2->removeTexture(textureEmissionRed);
+                    cubePolytope2->addTexture(textureEmission);
+                }
+
+                ImGui::SameLine();
+
+                if(ImGui::Button("Swap")) {
+                    cubePolytope2->removeTexture(textureEmission);
+                    cubePolytope2->removeTexture(textureEmissionRed);
+
+                    Texture::Ptr temp = textureEmission;
+                    textureEmission = textureEmissionRed;
+                    textureEmissionRed = temp;
+
+                    // IMPORTANT: set FreeGPU to true if the textures were copies
+                    textureEmission->setFreeGPU(true);
+                    textureEmissionRed->setFreeGPU(true);
+
+                    cubePolytope2->addTexture(textureEmission);
+                    cubePolytope2->addTexture(textureEmissionRed);
+                }
+
+                glm::vec3 backgroundColor = renderer->getBackgroundColor();
+                static float color[3] = {backgroundColor.r, backgroundColor.g, backgroundColor.b};
+                ImGui::ColorEdit3("Background color", color, 0);
+                renderer->setBackgroundColor(color[0], color[1], color[2]);
+
+                ImGui::Separator();
+
+                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+                ImGui::End();
+            }
+
             // Lighting window
             {
                 ImGui::Begin("Lighting");
                 ImGui::TextColored(ImColor(200, 150, 255), "Light configuration");
                 ImGui::Text("Controls for your custom application");
 
-                static bool enable = true;
+                static bool enable = false;
                 ImGui::Checkbox("Enable", &enable);
                 rendererSimple->setLightEnabled(enable);
-                rendererCSM->setLightEnabled(enable);
 
-                /*ImGui::SameLine();
+                ImGui::SameLine();
 
-                static bool enablePointLight = false;
-                bool previousPointLight = enablePointLight;
-                ImGui::Checkbox("Point Light", &enablePointLight);
-                if(enablePointLight != previousPointLight) {
-                    if(enablePointLight) {
-                        renderer->addLight(light1);
+                static bool enableBlinn = true;
+                ImGui::Checkbox("Blinn", &enableBlinn);
+                Light::blinn = enableBlinn;
+
+                ImGui::SameLine();
+
+                static bool enableDirectionalLight = false;
+                bool previousDirectionalLight = enableDirectionalLight;
+                ImGui::Checkbox("Directional", &enableDirectionalLight);
+                if(enableDirectionalLight != previousDirectionalLight) {
+                    if(enableDirectionalLight) {
+                        renderer->addLight(light4);
+                        lightsGroup->add(directionalPolytope);
                     }
                     else {
-                        renderer->removeLight(light1);
+                        renderer->removeLight(light4);
+                        lightsGroup->removePolytope(directionalPolytope);
                     }
-                    //previousPointLight = enablePointLight;
-                }*/
+                    previousDirectionalLight = enableDirectionalLight;
+                }
 
-
-                /*static float ambientStrength = light2.getAmbient()[0];
+                static float ambientStrength = light.getAmbient()[0];
                 ImGui::SliderFloat("Ambient strength", &ambientStrength, 0.f, 1.f);
                 light.setAmbient(glm::vec3(ambientStrength));
                 light2.setAmbient(glm::vec3(ambientStrength));
@@ -208,6 +341,8 @@ int main() {
                 static float color[3] = { lightColor[0], lightColor[1], lightColor[2] };
                 ImGui::ColorEdit3("Light color", color, 0);
 
+                static Polytope::Ptr lightPolytope = lightsGroup->getPolytopes()[0];
+
                 if(color[0] != lightColor.r || color[1] != lightColor.g || color[2] != lightColor.b) {
                     light.setColor(glm::vec3(color[0], color[1], color[2]));
                     for(auto& vec : cubeVertices) {
@@ -215,47 +350,55 @@ int main() {
                         vec.g = color[1];
                         vec.b = color[2];
                     }
-                }*/
+                    lightPolytope->updateVertices(cubeVertices);
+                }
 
-                // Position of Directional Light
                 static float lx = light2.getPosition().x;
                 static float ly = light2.getPosition().y;
                 static float lz = light2.getPosition().z;
 
-                ImGui::Text("Directional Light position");
-                ImGui::SliderFloat("x", &lx, -100.f, 100.f);
-                ImGui::SliderFloat("y", &ly, -100.f, 100.f);
-                ImGui::SliderFloat("z", &lz, -100.f, 100.f);
+                ImGui::Text("Light position");
+                ImGui::SliderFloat("x:", &lx, -50.f, 50.f);
+                ImGui::SliderFloat("y:", &ly, -50.f, 50.f);
+                ImGui::SliderFloat("z:", &lz, -50.f, 50.f);
 
                 glm::vec3 lightPosition = light2.getPosition();
 
                 if(glm::vec3(lx, ly, lz) != lightPosition) {
-                    /*float dx = lx - lightPosition.x;
+                    float dx = lx - lightPosition.x;
                     float dy = ly - lightPosition.y;
-                    float dz = lz - lightPosition.z;*/
+                    float dz = lz - lightPosition.z;
                     light2.setPosition(glm::vec3(lx, ly, lz));
-                    rendererSimple->setShadowLightPos(light2.getPosition());
-                    rendererCSM->setShadowLightPos(light2.getPosition());
-                    //lightPolytope->translate(glm::vec3(dx, dy, dz));
+                    lightPolytope->translate(glm::vec3(dx, dy, dz));
                 }
 
                 ImGui::Separator();
 
                 ImGui::TextColored(ImColor(200, 150, 255), "Shadows");
 
-                static bool shadowMapping = true;
+                static bool shadowMapping = false;
                 ImGui::Checkbox("Shadow mapping", &shadowMapping);
                 rendererSimple->setShadowMapping(shadowMapping);
-                rendererCSM->setShadowMapping(shadowMapping);
 
                 ImGui::Separator();
 
-                ImGui::TextColored(ImColor(200, 150, 255), "Snapshot");
+                ImGui::TextColored(ImColor(200, 150, 255), "HDR");
 
-                if(ImGui::Button("Take Snapshot")) {
-                    rendererSimple->takeSnapshot();
-                    rendererCSM->takeSnapshot();
-                }
+                static bool hdr = rendererSimple->isHDR();
+                ImGui::Checkbox("HDR", &hdr);
+                rendererSimple->setHDR(hdr);
+
+                ImGui::SameLine();
+
+                static bool gammaCorrection = rendererSimple->isGammaCorrection();
+                ImGui::Checkbox("Gamma correction", &gammaCorrection);
+                rendererSimple->setGammaCorrection(gammaCorrection);
+
+                ImGui::SameLine();
+
+                static float hdrExposure = 1.0f;
+                ImGui::SliderFloat("HDR exposure:", &hdrExposure, 0.f, 5.f);
+                rendererSimple->setExposure(hdrExposure);
 
                 ImGui::End();
             }
@@ -265,7 +408,7 @@ int main() {
                 ImGui::Begin("Camera");
 
                 ImGui::TextColored(ImColor(200, 150, 255), "Camera options");
-                /*ImGui::Text("Camera sensitivity");
+                ImGui::Text("Camera sensitivity");
 
                 ImGui::Separator();
 
@@ -273,7 +416,7 @@ int main() {
                 ImGui::SliderFloat("Pan sensitivity", &panSensitivity, 0.01f, 50.f);
                 ImGui::SliderFloat("Zoom sensitivity", &zoomSensitivity, 0.01f, 50.f);
 
-                fpsCamera->setSensitivity(sensitivity / 10);*/
+                fpsCamera->setSensitivity(sensitivity / 10);
 
                 ImGui::Separator();
 
@@ -287,56 +430,52 @@ int main() {
                 ImGui::Separator();
 
                 if (ImGui::Button("Reset camera")) {
-                    camera->setTheta(2.5/*M_PI_2*/);
-                    camera->setPhi(5.5/*2 * M_PI*/);
-                    camera->setRadius(60.0f);
+                    camera->setTheta(M_PI_2);
+                    camera->setPhi(2 * M_PI);
+                    camera->setRadius(5.5f);
                     camera->setCenter(glm::vec3(0, 0, 0));
                     camera->setUp(glm::vec3(0, 1, 0));
-                    /*sensitivity = 1.5f;
+                    sensitivity = 1.5f;
                     panSensitivity = 1.0f;
                     zoomSensitivity = 1.0f;
 
                     fpsCamera->setEye(glm::vec3(0, 0, -1));
                     fpsCamera->setUp(glm::vec3(0, -1, 0));
-                    fpsCamera->setCenter(glm::vec3(0, 0, 0));*/
+                    fpsCamera->setCenter(glm::vec3(0, 0, 0));
                 }
-                /*ImGui::SameLine();
+                ImGui::SameLine();
                 if (ImGui::Button("Trackball camera")) {
-                    renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
+                    rendererSimple->setCamera(std::dynamic_pointer_cast<Camera>(camera));
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("FPS camera")) {
-                    renderer->setCamera(std::dynamic_pointer_cast<Camera>(fpsCamera));
+                    rendererSimple->setCamera(std::dynamic_pointer_cast<Camera>(fpsCamera));
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                }*/
+                }
 
-                //ImGui::Separator();
+                ImGui::Separator();
 
-                /*ImGui::TextColored(ImColor(200, 150, 255), "Mouse Ray Casting");
+                ImGui::TextColored(ImColor(200, 150, 255), "Mouse Ray Casting");
 
                 ImGui::Checkbox("Enable 3D Point", &enablePoint3d);
                 ImGui::SameLine();
                 ImGui::Checkbox("Enable Drawing Ray", &enableDrawRay);
                 ImGui::SliderFloat("Ray long", &rayLong, 0.5f, 1500);
-                ImGui::Checkbox("Enable object selecting", &enableObjectSelecting);*/
+                ImGui::Checkbox("Enable object selecting", &enableObjectSelecting);
 
                 ImGui::End();
             }
-            // Render window - Simple Shadow Mapping
+            // Render window
             static bool windowFocus = false;
             {
-                ImGui::Begin("RendererSimple", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                ImGui::Begin("Renderer", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
                 windowFocus = ImGui::IsWindowFocused() || ImGui::IsWindowHovered();
-
-                auto duration_simple = std::chrono::duration_cast<std::chrono::microseconds>(stop_simple - start_simple).count();
-
-                ImGui::Text("FPS: %d µs/frame (%.1f FPS)", duration_simple, 1000000.0/(float)duration_simple);
 
                 // Render graphics as a texture
                 ImGui::Image((void*)(intptr_t)rendererSimple->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
 
                 // Resize window
-                static ImVec2 previousSize(100, 100);
+                static ImVec2 previousSize(0, 0);
                 ImVec2 currentSize = ImGui::GetWindowSize();
 
                 if(currentSize.x != previousSize.x || currentSize.y != previousSize.y) {
@@ -347,13 +486,13 @@ int main() {
                     float radius = camera->getRadius();
 
                     // Update camera aspect ratio
-                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 10, 10000);
+                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
                     camera->setTheta(theta);  camera->setPhi(phi);
                     camera->setCenter(center); camera->setUp(up);
                     camera->setRadius(radius);
 
                     // Restart fps camera
-                    //*fpsCamera = *FPSCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
+                    *fpsCamera = *FPSCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
                 }
                 previousSize = currentSize;
 
@@ -374,7 +513,6 @@ int main() {
                 }else first = true;
 
                 // Camera rotation
-                float sensitivity = 5.0;
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Left) && windowFocus) {
                     float dTheta = (mousePositionRelative.x - previous.x) / size.x;
                     float dPhi = (mousePositionRelative.y - previous.y) / size.y;
@@ -383,259 +521,18 @@ int main() {
                 }
 
                 // Camera pan
-                /*if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && windowFocus) {
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && windowFocus) {
                     float dx = (mousePositionRelative.x - previous.x) / (size.x / 2);
                     float dy = (mousePositionRelative.y - previous.y) / (size.y / 2);
                     previous = mousePositionRelative;
                     camera->pan(dx * panSensitivity, -dy * panSensitivity);
-                }*/
+                }
 
                 // Camera zoom
-                float zoomSensitivity = 5.0;
                 if(windowFocus) camera->zoom(ImGui::GetIO().MouseWheel * zoomSensitivity);
 
                 // FPS Camera
-                //updateFPSCamera(mousePositionRelative.x, mousePositionRelative.y);
-
-                // Mouse Picking
-                /*if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && (enablePoint3d || enableDrawRay || enableObjectSelecting) && windowFocus) {
-
-                    MouseRayCasting mouseRayCasting(std::dynamic_pointer_cast<Camera>(camera), ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
-                    MouseRayCasting::Ray mouseRay = mouseRayCasting.getRay(mousePositionRelative.x, mousePositionRelative.y);
-
-                    if(enablePoint3d) {
-                        // The projection of this point belongs to the Screen Plane (X, Y)
-                        glm::vec3 screenProjectedPoint = mouseRay.getScreenProjectedPoint();
-                        Vec3f point3D = Vec3f(screenProjectedPoint.x, screenProjectedPoint.y, screenProjectedPoint.z, 1, 0, 0);
-                        mousePickingPolytope->addVertex(point3D);
-                    }
-
-                    if(enableDrawRay) {
-                        // Get the points of the ray from the screen to 'rayLong' distance
-                        glm::vec3 begin = mouseRay.getPoint(rayLong);
-                        glm::vec3 end = mouseRay.getPoint(1);
-                        // Add these two vertices into the GL_LINES dynamic polytope
-                        Vec3f vertex1(begin.x, begin.y, begin.z, 0, 1, 0);
-                        Vec3f vertex2(end.x, end.y, end.z, 0, 0, 1);
-                        raysPolytope->addVertex(vertex1);
-                        raysPolytope->addVertex(vertex2);
-                    }
-
-                    if(enableObjectSelecting) {
-
-                        // THIS IS A SIMPLE EXAMPLE OF BARYCENTRIC INTERSECTIONS (FOR THIS TEST).
-                        // BUILD A BETTER ONE FOR YOUR OWN APPLICATION / GAME / GAMEENGINE
-
-                        struct Plane {
-
-                            double A, B, C, D;
-
-                            Plane(double _A, double _B, double _C, double _D)
-                                : A(_A), B(_B), C(_C), D(_D) {
-                            }
-
-                            Plane() = default;
-                            ~Plane() = default;
-
-                            static Plane plane3points(Vec3f& p1, Vec3f& p2, Vec3f& p3) {
-                                Vec3f v1 = p2 - p1;
-                                Vec3f v2 = p3 - p1;
-                                Vec3f normal = v1 ^ v2;
-                                double D = -(p1.x * normal.x + p1.y * normal.y + p1.z * normal.z);
-                                return Plane(normal.x, normal.y, normal.z, D);
-                            }
-                        };
-
-                        auto intersection = [&](MouseRayCasting::Ray& ray, Plane& plane) {
-                            double lambda = -( (plane.A * ray.origin.x + plane.B * ray.origin.y + plane.C * ray.origin.z + plane.D)
-                                / (plane.A * ray.rayDirection.x + plane.B * ray.rayDirection.y + plane.C * ray.rayDirection.z) );
-                            return Vec3f(
-                                ray.origin.x + lambda * ray.rayDirection.x,
-                                ray.origin.y + lambda * ray.rayDirection.y,
-                                ray.origin.z + lambda * ray.rayDirection.z
-                            );
-                        };
-
-                        struct Vec2f {
-
-                            float x, y;
-
-                            Vec2f(float _x, float _y) : x(_x), y(_y) { }
-                            Vec2f() = default;
-                            ~Vec2f() = default;
-
-                            // Dot product
-                            inline float operator * (const Vec2f& rhs) const {
-                                return x * rhs.x + y * rhs.y;
-                            }
-
-                            // Cross product
-                            inline float operator ^ (const Vec2f& rhs) const {
-                                return x * rhs.y - y * rhs.x;
-                            }
-                        };
-
-                        auto isPointInTriangle = [&](float x, float y, float x0, float y0, float x1, float y1, float x2, float y2)
-                        {
-                            Vec2f v1(x0, y0);
-                            Vec2f v2(x1, y1);
-                            Vec2f v3(x2, y2);
-
-                            Vec2f vs1(v2.x - v1.x, v2.y - v1.y);
-                            Vec2f vs2(v3.x - v1.x, v3.y - v1.y);
-
-                            Vec2f q(x - v1.x, y - v1.y);
-
-                            float s = static_cast<float>(q ^ vs2) / (vs1 ^ vs2);
-                            float t = static_cast<float>(vs1 ^ q) / (vs1 ^ vs2);
-
-                            if((s >= 0) && (t >= 0) && (s + t <= 1)) return true;
-                            return false;
-                        };
-
-                        auto checkPolytopeSelection = [&](std::vector<Vec3f>& points, Group::Ptr& group, Scene::Ptr& scene, Polytope::Ptr& polytope)
-                        {
-                            for(int i = 0; i < points.size(); i += 3) {
-
-                                glm::vec4 vertex1(points[i].x, points[i].y, points[i].z, 1);
-                                glm::vec4 vertex2(points[i + 1].x, points[i + 1].y, points[i + 1].z, 1);
-                                glm::vec4 vertex3(points[i + 2].x, points[i + 2].y, points[i + 2].z, 1);
-
-                                // Apply transforms
-                                glm::mat4 model = scene->getModelMatrix() * group->getModelMatrix() * polytope->getModelMatrix();
-
-                                vertex1 = model * vertex1;
-                                vertex2 = model * vertex2;
-                                vertex3 = model * vertex3;
-
-                                Vec3f v1(vertex1.x, vertex1.y, vertex1.z);
-                                Vec3f v2(vertex2.x, vertex2.y, vertex2.z);
-                                Vec3f v3(vertex3.x, vertex3.y, vertex3.z);
-
-                                Plane trianglePlane = Plane::plane3points(v1, v2, v3);
-                                Vec3f rayIntersection = intersection(mouseRay, trianglePlane);
-
-                                // Check if intersection is inside of the triangle
-                                if(isPointInTriangle(
-                                    rayIntersection.x, rayIntersection.y,
-                                    v1.x, v1.y,
-                                    v2.x, v2.y,
-                                    v3.x, v3.y
-                                ) || isPointInTriangle(
-                                    rayIntersection.y, rayIntersection.z,
-                                    v1.y, v1.z,
-                                    v2.y, v2.z,
-                                    v3.y, v3.z
-                                ) || isPointInTriangle(
-                                    rayIntersection.x, rayIntersection.z,
-                                    v1.x, v1.z,
-                                    v2.x, v2.z,
-                                    v3.x, v3.z
-                                ) ) {
-                                    polytope->setSelected(true);
-                                    if(enablePoint3d) mousePickingPolytope->addVertex(rayIntersection);
-                                    break;
-                                }
-                                polytope->setSelected(false);
-                            }
-                        };
-
-                        // CubePolytope selection
-                        static std::vector<Vec3f> pointsCube = cubePolytope->getVertices();
-                        checkPolytopeSelection(pointsCube, group, mainScene, cubePolytope);
-
-                        // CubePolytope2 selection
-                        static std::vector<Vec3f> pointsCube2 = cubePolytope2->getVertices();
-                        checkPolytopeSelection(pointsCube2, group, mainScene, cubePolytope2);
-
-                        // CubePolytope indices selection
-                        static std::vector<Vec3f> pointsIndices;
-                        static std::vector<Vec3f> cubeVertices = cubePolytopeIndices->getVertices();
-                        static std::vector<unsigned int> cubeIndices = cubePolytopeIndices->getIndices();
-
-                        if(pointsIndices.empty()) {
-
-                            for(int i = 0; i < cubeIndices.size(); i += 3) {
-
-                                Vec3f vertex1 = cubeVertices[cubeIndices[i]];
-                                Vec3f vertex2 = cubeVertices[cubeIndices[i + 1]];
-                                Vec3f vertex3 = cubeVertices[cubeIndices[i + 2]];
-
-                                pointsIndices.push_back(vertex1);
-                                pointsIndices.push_back(vertex2);
-                                pointsIndices.push_back(vertex3);
-                            }
-                        }
-                        checkPolytopeSelection(pointsIndices, group, mainScene, cubePolytopeIndices);
-                    }
-                }*/
-
-                ImGui::End();
-            }
-
-            // Render window - Simple Shadow Mapping
-            //static bool windowFocus = false;
-            {
-                ImGui::Begin("RendererCSM", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-                windowFocus = ImGui::IsWindowFocused() || ImGui::IsWindowHovered();
-
-                auto duration_csm = std::chrono::duration_cast<std::chrono::microseconds>(stop_csm - start_csm).count();
-
-                ImGui::Text("FPS: %d µs/frame (%.1f FPS)", duration_csm, 1000000.0/(float)duration_csm);
-
-                // Render graphics as a texture
-                ImGui::Image((void*)(intptr_t)rendererCSM->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
-
-                // Resize window
-                static ImVec2 previousSize(100, 100);
-                ImVec2 currentSize = ImGui::GetWindowSize();
-
-                if(currentSize.x != previousSize.x || currentSize.y != previousSize.y) {
-
-                    // Restart trackball camera
-                    float theta = camera->getTheta(), phi = camera->getPhi();
-                    glm::vec3 center = camera->getCenter(), up = camera->getUp();
-                    float radius = camera->getRadius();
-
-                    // Update camera aspect ratio
-                    /**camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
-                    camera->setTheta(theta);  camera->setPhi(phi);
-                    camera->setCenter(center); camera->setUp(up);
-                    camera->setRadius(radius);*/
-
-                    // Restart fps camera
-                    //*fpsCamera = *FPSCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
-                }
-                previousSize = currentSize;
-
-                // Mouse Events
-                ImVec2 size = ImGui::GetWindowSize();
-                ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
-                ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
-                ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, mousePositionAbsolute.y - screenPositionAbsolute.y);
-
-                static bool first = true;
-                static ImVec2 previous(0, 0);
-
-                if(ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
-                    if(first) {
-                        previous = mousePositionRelative;
-                        first = false;
-                    }
-                }else first = true;
-
-                // Camera rotation
-                float sensitivity = 5.0;
-                if(ImGui::IsMouseDragging(ImGuiMouseButton_Left) && windowFocus) {
-                    float dTheta = (mousePositionRelative.x - previous.x) / size.x;
-                    float dPhi = (mousePositionRelative.y - previous.y) / size.y;
-                    previous = mousePositionRelative;
-                    camera->rotate(-dTheta * sensitivity, dPhi * sensitivity);
-                }
-
-                // Camera zoom
-                float zoomSensitivity = 5.0;
-                if(windowFocus) camera->zoom(ImGui::GetIO().MouseWheel * zoomSensitivity);
+                updateFPSCamera(mousePositionRelative.x, mousePositionRelative.y);
 
                 ImGui::End();
             }
@@ -644,10 +541,19 @@ int main() {
             renderImGui(io);
         }
 
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
         // Update window
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Destroy imgui
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     // Destroy window
     glfwTerminate();
@@ -660,7 +566,7 @@ int main() {
 void initImGui(ImGuiIO& io) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 
     //ImGui::StyleColorsDark();
     Style();
@@ -671,7 +577,7 @@ void initImGui(ImGuiIO& io) {
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
-    const char* glsl_version = "#version 330";
+    const char* glsl_version = "#version 130";
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 }
@@ -693,7 +599,7 @@ void dockSpace(bool* p_open) {
         ImGui::SetNextWindowViewport(viewport->ID);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        //window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
         window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     }
     else dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
@@ -746,4 +652,31 @@ void renderImGui(ImGuiIO& io) {
         ImGui::RenderPlatformWindowsDefault();
         glfwMakeContextCurrent(backup_current_context);
     }
+}
+
+// Window functions
+void resizeCallback(GLFWwindow* w, int width, int height) {
+    //renderer->setViewport(width, height);
+}
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_W && action == GLFW_PRESS)          movementForward = true;
+    else if(key == GLFW_KEY_W && action == GLFW_RELEASE)    movementForward = false;
+    if (key == GLFW_KEY_S && action == GLFW_PRESS)          movementBackward = true;
+    else if(key == GLFW_KEY_S && action == GLFW_RELEASE)    movementBackward = false;
+    if (key == GLFW_KEY_A && action == GLFW_PRESS)          movementLeft = true;
+    else if(key == GLFW_KEY_A && action == GLFW_RELEASE)    movementLeft = false;
+    if (key == GLFW_KEY_D && action == GLFW_PRESS)          movementRight = true;
+    else if (key == GLFW_KEY_D && action == GLFW_RELEASE)   movementRight = false;
+    if(key == GLFW_KEY_ESCAPE) glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+void updateFPSCamera(double xpos, double ypos) {
+    // Look around
+    fpsCamera->lookAround(xpos, ypos);
+    // Movement
+    if(movementForward) fpsCamera->move(FPSCamera::Movement::Forward);
+    if(movementBackward) fpsCamera->move(FPSCamera::Movement::Backward);
+    if(movementRight) fpsCamera->move(FPSCamera::Movement::Right);
+    if(movementLeft) fpsCamera->move(FPSCamera::Movement::Left);
 }
