@@ -13,6 +13,9 @@
 #include "ImguiStyles.h"
 #include "imgui/imgui_internal.h"
 
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 300
+
 const int WIDTH = 1280;
 const int HEIGHT = 900;
 
@@ -52,7 +55,11 @@ int main() {
 
     // Renderer
     rendererSimple = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::Simple);
+    rendererSimple->setCameraFarPlane(FAR_PLANE);
+    rendererSimple->setCameraNearPlane(NEAR_PLANE);
     rendererCSM = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::CSM);
+    rendererCSM->setCameraFarPlane(FAR_PLANE);
+    rendererCSM->setCameraNearPlane(NEAR_PLANE);
 
     // Lighting
     rendererSimple->enableLight();
@@ -64,7 +71,7 @@ int main() {
     renderer->addLight(light1);*/
 
     // Directional Lighting
-    DirectionalLight light2(glm::vec3(20, 50, 20));//(glm::vec3(-5, 3, 5.5));
+    DirectionalLight light2(glm::vec3(20, 150, 20));//(glm::vec3(-5, 3, 5.5));
     light2.setColor(glm::vec3(1));
     rendererSimple->addLight(light2);
     rendererCSM->addLight(light2);
@@ -77,7 +84,7 @@ int main() {
 
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
-    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, rendererSimple->getCameraNearPlane(), rendererSimple->getCameraFarPlane());
+    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
     camera->zoom(-60);
     camera->rotate(2.5, 5.0);
 
@@ -106,11 +113,6 @@ int main() {
     cube->translate(glm::vec3(-10,5,-10));
     cube->scale(glm::vec3(10));
 
-    const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/fbx/Forest.fbx");
-    const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
-    groundPoly->scale(glm::vec3(10));
-    groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
-
     const Model::Ptr wizard = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/wizard.obj");
     const Polytope::Ptr wizardPoly = wizard->getPolytopes()[0];
     wizardPoly->setFaceCulling(Polytope::FaceCulling::NONE);
@@ -119,13 +121,17 @@ int main() {
 
     Group::Ptr group = Group::New();
     group->add(dogPoly);
-    group->add(groundPoly);
     group->add(dog2Poly);
     group->add(cube);
     group->add(wizardPoly);
 
+    Model::Ptr townSceneModel = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/Novalis.obj");
+    townSceneModel->scale(glm::vec3(3));
+
+
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
+    scene->addModel(townSceneModel);
     //scene->addModel(canyon);
 
     rendererSimple->addScene(scene);
@@ -223,9 +229,9 @@ int main() {
                 static float lz = light2.getPosition().z;
 
                 ImGui::Text("Directional Light position");
-                ImGui::SliderFloat("x", &lx, -100.f, 100.f);
-                ImGui::SliderFloat("y", &ly, -100.f, 100.f);
-                ImGui::SliderFloat("z", &lz, -100.f, 100.f);
+                ImGui::SliderFloat("x", &lx, -300.f, 300.f);
+                ImGui::SliderFloat("y", &ly, -300.f, 300.f);
+                ImGui::SliderFloat("z", &lz, -300.f, 300.f);
 
                 glm::vec3 lightPosition = light2.getPosition();
 
@@ -347,7 +353,7 @@ int main() {
                     float radius = camera->getRadius();
 
                     // Update camera aspect ratio
-                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 10, 10000);
+                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, NEAR_PLANE, FAR_PLANE);
                     camera->setTheta(theta);  camera->setPhi(phi);
                     camera->setCenter(center); camera->setUp(up);
                     camera->setRadius(radius);

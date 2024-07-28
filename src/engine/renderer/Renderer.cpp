@@ -4,8 +4,8 @@
 
 #include "TrackballCamera.h"
 
-#define SHADOW_MAP_WIDTH 2048
-#define SHADOW_MAP_HEIGHT 2048
+#define SHADOW_MAP_WIDTH 2048*2
+#define SHADOW_MAP_HEIGHT 2048*2
 
 Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, ShadowMappingProcedure _shadowMappingProcedure)
     : camera(nullptr), 

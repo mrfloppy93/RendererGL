@@ -189,7 +189,9 @@ public:
 
     inline Camera::Ptr getCamera() { return camera; }
     inline float getCameraNearPlane() const { return cameraNearPlane; }
+    inline void setCameraNearPlane(float _nearPlane) { this->cameraNearPlane = _nearPlane; }
     inline float getCameraFarPlane() const { return cameraNearPlane; }
+    inline void setCameraFarPlane(float _farPlane) { this->cameraFarPlane = _farPlane; }
 
     inline void enableLight() { hasLight = true; }
     inline void disableLight() { hasLight = false; } 
