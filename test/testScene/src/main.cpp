@@ -14,7 +14,7 @@
 #include "imgui/imgui_internal.h"
 
 #define NEAR_PLANE 0.1
-#define FAR_PLANE 300
+#define FAR_PLANE 1000
 
 const int WIDTH = 1280;
 const int HEIGHT = 900;
@@ -55,11 +55,7 @@ int main() {
 
     // Renderer
     rendererSimple = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::Simple);
-    rendererSimple->setCameraFarPlane(FAR_PLANE);
-    rendererSimple->setCameraNearPlane(NEAR_PLANE);
     rendererCSM = Renderer::New(WIDTH, HEIGHT, ShadowProcedure::CSM);
-    rendererCSM->setCameraFarPlane(FAR_PLANE);
-    rendererCSM->setCameraNearPlane(NEAR_PLANE);
 
     // Lighting
     rendererSimple->enableLight();
@@ -71,7 +67,7 @@ int main() {
     renderer->addLight(light1);*/
 
     // Directional Lighting
-    DirectionalLight light2(glm::vec3(20, 150, 20));//(glm::vec3(-5, 3, 5.5));
+    DirectionalLight light2(glm::vec3(250, 300, 20));//(glm::vec3(-5, 3, 5.5));
     light2.setColor(glm::vec3(1));
     rendererSimple->addLight(light2);
     rendererCSM->addLight(light2);
@@ -85,8 +81,8 @@ int main() {
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
-    camera->zoom(-60);
-    camera->rotate(2.5, 5.0);
+    camera->zoom(-90);
+    camera->rotate(3.5, 5.0);
 
     rendererSimple->setCamera(std::dynamic_pointer_cast<Camera>(camera));
     rendererCSM->setCamera(std::dynamic_pointer_cast<Camera>(camera));
@@ -109,9 +105,9 @@ int main() {
     dog2Poly->rotate(-90, glm::vec3(1,0,0));
     dog2Poly->scale(glm::vec3(.3));
 
-    Cube::Ptr cube = Cube::New();
-    cube->translate(glm::vec3(-10,5,-10));
-    cube->scale(glm::vec3(10));
+    //Cube::Ptr cube = Cube::New();
+    //cube->translate(glm::vec3(-10,5,-10));
+    //cube->scale(glm::vec3(10));
 
     const Model::Ptr wizard = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/wizard.obj");
     const Polytope::Ptr wizardPoly = wizard->getPolytopes()[0];
@@ -122,17 +118,19 @@ int main() {
     Group::Ptr group = Group::New();
     group->add(dogPoly);
     group->add(dog2Poly);
-    group->add(cube);
+    //group->add(cube);
     group->add(wizardPoly);
 
-    Model::Ptr townSceneModel = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/Novalis.obj");
-    townSceneModel->scale(glm::vec3(3));
+    Model::Ptr sceneModel = Model::New("/home/lukas/CLionProjects/RendererGL/models/dae/giugno.dae");
+    sceneModel->rotate(90,glm::vec3(1.0,0.0,0.0));
+    sceneModel->translate(glm::vec3(190.0, 200.0, -9.5));
+    sceneModel->scale(glm::vec3(.5));
 
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
-    scene->addModel(townSceneModel);
-    //scene->addModel(canyon);
+    scene->addModel(sceneModel);
+    scene->translate(glm::vec3(0.0,-20.0,0.0));
 
     rendererSimple->addScene(scene);
     rendererCSM->addScene(scene);

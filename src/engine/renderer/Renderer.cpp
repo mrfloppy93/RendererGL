@@ -4,14 +4,17 @@
 
 #include "TrackballCamera.h"
 
-#define SHADOW_MAP_WIDTH 2048*2
-#define SHADOW_MAP_HEIGHT 2048*2
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 1000
+
+#define SHADOW_MAP_WIDTH 2048
+#define SHADOW_MAP_HEIGHT 2048
 
 Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, ShadowMappingProcedure _shadowMappingProcedure)
     : camera(nullptr), 
     hasCamera(false),
-    cameraNearPlane(10.0),
-    cameraFarPlane(300.0),
+    cameraNearPlane(NEAR_PLANE),
+    cameraFarPlane(FAR_PLANE),
     hasLight(false), 
     nLights(0),
     projection(glm::mat4(1.f)), 
@@ -783,7 +786,7 @@ return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getVie
 }
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
-    //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
+    std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
     if(camera->getType() == Camera::CameraType::Trackball) {
@@ -828,11 +831,11 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     if(maxZ < 0) maxZ /= zMult;
     else maxZ *= zMult;
 
+    const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
+
     //std::cout << "minX: " << minX << "\tmaxX: " << maxX << std::endl;
     //std::cout << "minY: " << minY << "\tmaxY: " << maxY << std::endl;
     //std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
-
-    const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
 
     return lightProjection * lightView;
 
@@ -873,9 +876,11 @@ void Renderer::calculateCascadeLevels() {
         }
         // CSM - Fixed Cascade Levels
         case ShadowMappingProcedure::CSM : {
-            shadowCascadeLevels = {
-                cameraFarPlane / 10.0f, cameraFarPlane / 5.0f, cameraFarPlane / 2.0f
-            };
+            for(int i = 1; i < 3; ++i) {
+                //float splitPos = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
+                float splitPos = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+                shadowCascadeLevels.push_back(splitPos);
+            }
             break;
         }
         // PSSM
@@ -887,7 +892,7 @@ void Renderer::calculateCascadeLevels() {
 
         }
         default: {
-            shadowCascadeLevels = {cameraFarPlane};
+            shadowCascadeLevels = {};
             break;
         }
     }
