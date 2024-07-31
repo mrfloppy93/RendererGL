@@ -14,7 +14,7 @@
 #include "imgui/imgui_internal.h"
 
 #define NEAR_PLANE 0.1
-#define FAR_PLANE 1000
+#define FAR_PLANE 500
 
 const int WIDTH = 1280;
 const int HEIGHT = 900;

@@ -5,7 +5,7 @@
 #include "TrackballCamera.h"
 
 #define NEAR_PLANE 0.1
-#define FAR_PLANE 1000
+#define FAR_PLANE 500
 
 #define SHADOW_MAP_WIDTH 2048
 #define SHADOW_MAP_HEIGHT 2048
@@ -786,7 +786,7 @@ return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getVie
 }
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
-    std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
+    //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
     if(camera->getType() == Camera::CameraType::Trackball) {
@@ -825,7 +825,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         maxZ = std::max(maxZ, trf.z);
     }
 
-    constexpr float zMult = 10.0f;
+    constexpr float zMult = 30.0f;
     if(minZ < 0) minZ *= zMult;
     else minZ /= zMult;
     if(maxZ < 0) maxZ /= zMult;
@@ -877,8 +877,8 @@ void Renderer::calculateCascadeLevels() {
         // CSM - Fixed Cascade Levels
         case ShadowMappingProcedure::CSM : {
             for(int i = 1; i < 3; ++i) {
-                //float splitPos = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
-                float splitPos = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+                float splitPos = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
+                //float splitPos = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
                 shadowCascadeLevels.push_back(splitPos);
             }
             break;
