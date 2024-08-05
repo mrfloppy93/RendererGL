@@ -7,11 +7,14 @@
 #define SHADOW_MAP_WIDTH 2048
 #define SHADOW_MAP_HEIGHT 2048
 
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 300.0
+
 Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
     : camera(nullptr), 
     hasCamera(false),
-    cameraNearPlane(0.1),
-    cameraFarPlane(300.0),
+    cameraNearPlane(NEAR_PLANE),
+    cameraFarPlane(FAR_PLANE),
     hasLight(false), 
     nLights(0),
     projection(glm::mat4(1.f)), 

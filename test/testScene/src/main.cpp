@@ -12,6 +12,9 @@
 #include "ImguiStyles.h"
 #include "imgui/imgui_internal.h"
 
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 300.0
+
 const int WIDTH = 1280;
 const int HEIGHT = 900;
 
@@ -66,10 +69,16 @@ int main() {
 
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
-    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, renderer->getCameraNearPlane(), renderer->getCameraFarPlane());
+    TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
     camera->setPhi(5.0);
     camera->setTheta(2.5);
-    camera->setRadius(60);
+    camera->zoom(-60);
+
+    // Camera
+    TrackballCamera::Ptr camera2 = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
+    camera2->setPhi(2.0);
+    camera2->setTheta(2.5);
+    camera2->zoom(-60);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
@@ -94,6 +103,9 @@ int main() {
     Cube::Ptr cube = Cube::New();
     cube->translate(glm::vec3(-10,5,-10));
     cube->scale(glm::vec3(10));
+    Group::Ptr cubeGroup = Group::New();
+    cubeGroup->add(cube);
+    cubeGroup->setShowWire(true);
 
     const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
@@ -104,10 +116,11 @@ int main() {
     group->add(dogPoly);
     group->add(groundPoly);
     group->add(dog2Poly);
-    group->add(cube);
+    //group->add(cube);
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
+    scene->addGroup(cubeGroup);
 
     renderer->addScene(scene);
 
@@ -231,7 +244,7 @@ int main() {
                     previousShadowMapping = shadowMapping;
                 }
 
-                if(ImGui::RadioButton("CSM", shadowProcedure == 1)) {
+                /*if(ImGui::RadioButton("CSM", shadowProcedure == 1)) {
                     shadowProcedure = 1;
                     // activate CSM, deactivate other procedures
                     renderer->setShadowMappingProcedure(shadowProcedure);
@@ -245,7 +258,7 @@ int main() {
                     shadowProcedure = 3;
                     // activate TSM, deactivate other procedures
                     renderer->setShadowMappingProcedure(shadowProcedure);
-                }
+                }*/
 
                 ImGui::End();
             }
@@ -312,6 +325,8 @@ int main() {
 
                 ImGui::End();
             }
+
+            renderer->setCamera(camera);
             // Render window
             static bool windowFocus = false;
             {
@@ -333,7 +348,7 @@ int main() {
                     float radius = camera->getRadius();
 
                     // Update camera aspect ratio
-                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
+                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, NEAR_PLANE, FAR_PLANE);
                     camera->setTheta(theta);  camera->setPhi(phi);
                     camera->setCenter(center); camera->setUp(up);
                     camera->setRadius(radius);
@@ -379,6 +394,257 @@ int main() {
                 // Camera zoom
                 float zoomSensitivity = 5.0;
                 if(windowFocus) camera->zoom(ImGui::GetIO().MouseWheel * zoomSensitivity);
+
+                // FPS Camera
+                //updateFPSCamera(mousePositionRelative.x, mousePositionRelative.y);
+
+                // Mouse Picking
+                /*if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && (enablePoint3d || enableDrawRay || enableObjectSelecting) && windowFocus) {
+
+                    MouseRayCasting mouseRayCasting(std::dynamic_pointer_cast<Camera>(camera), ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
+                    MouseRayCasting::Ray mouseRay = mouseRayCasting.getRay(mousePositionRelative.x, mousePositionRelative.y);
+
+                    if(enablePoint3d) {
+                        // The projection of this point belongs to the Screen Plane (X, Y)
+                        glm::vec3 screenProjectedPoint = mouseRay.getScreenProjectedPoint();
+                        Vec3f point3D = Vec3f(screenProjectedPoint.x, screenProjectedPoint.y, screenProjectedPoint.z, 1, 0, 0);
+                        mousePickingPolytope->addVertex(point3D);
+                    }
+
+                    if(enableDrawRay) {
+                        // Get the points of the ray from the screen to 'rayLong' distance
+                        glm::vec3 begin = mouseRay.getPoint(rayLong);
+                        glm::vec3 end = mouseRay.getPoint(1);
+                        // Add these two vertices into the GL_LINES dynamic polytope
+                        Vec3f vertex1(begin.x, begin.y, begin.z, 0, 1, 0);
+                        Vec3f vertex2(end.x, end.y, end.z, 0, 0, 1);
+                        raysPolytope->addVertex(vertex1);
+                        raysPolytope->addVertex(vertex2);
+                    }
+
+                    if(enableObjectSelecting) {
+
+                        // THIS IS A SIMPLE EXAMPLE OF BARYCENTRIC INTERSECTIONS (FOR THIS TEST).
+                        // BUILD A BETTER ONE FOR YOUR OWN APPLICATION / GAME / GAMEENGINE
+
+                        struct Plane {
+
+                            double A, B, C, D;
+
+                            Plane(double _A, double _B, double _C, double _D)
+                                : A(_A), B(_B), C(_C), D(_D) {
+                            }
+
+                            Plane() = default;
+                            ~Plane() = default;
+
+                            static Plane plane3points(Vec3f& p1, Vec3f& p2, Vec3f& p3) {
+                                Vec3f v1 = p2 - p1;
+                                Vec3f v2 = p3 - p1;
+                                Vec3f normal = v1 ^ v2;
+                                double D = -(p1.x * normal.x + p1.y * normal.y + p1.z * normal.z);
+                                return Plane(normal.x, normal.y, normal.z, D);
+                            }
+                        };
+
+                        auto intersection = [&](MouseRayCasting::Ray& ray, Plane& plane) {
+                            double lambda = -( (plane.A * ray.origin.x + plane.B * ray.origin.y + plane.C * ray.origin.z + plane.D)
+                                / (plane.A * ray.rayDirection.x + plane.B * ray.rayDirection.y + plane.C * ray.rayDirection.z) );
+                            return Vec3f(
+                                ray.origin.x + lambda * ray.rayDirection.x,
+                                ray.origin.y + lambda * ray.rayDirection.y,
+                                ray.origin.z + lambda * ray.rayDirection.z
+                            );
+                        };
+
+                        struct Vec2f {
+
+                            float x, y;
+
+                            Vec2f(float _x, float _y) : x(_x), y(_y) { }
+                            Vec2f() = default;
+                            ~Vec2f() = default;
+
+                            // Dot product
+                            inline float operator * (const Vec2f& rhs) const {
+                                return x * rhs.x + y * rhs.y;
+                            }
+
+                            // Cross product
+                            inline float operator ^ (const Vec2f& rhs) const {
+                                return x * rhs.y - y * rhs.x;
+                            }
+                        };
+
+                        auto isPointInTriangle = [&](float x, float y, float x0, float y0, float x1, float y1, float x2, float y2)
+                        {
+                            Vec2f v1(x0, y0);
+                            Vec2f v2(x1, y1);
+                            Vec2f v3(x2, y2);
+
+                            Vec2f vs1(v2.x - v1.x, v2.y - v1.y);
+                            Vec2f vs2(v3.x - v1.x, v3.y - v1.y);
+
+                            Vec2f q(x - v1.x, y - v1.y);
+
+                            float s = static_cast<float>(q ^ vs2) / (vs1 ^ vs2);
+                            float t = static_cast<float>(vs1 ^ q) / (vs1 ^ vs2);
+
+                            if((s >= 0) && (t >= 0) && (s + t <= 1)) return true;
+                            return false;
+                        };
+
+                        auto checkPolytopeSelection = [&](std::vector<Vec3f>& points, Group::Ptr& group, Scene::Ptr& scene, Polytope::Ptr& polytope)
+                        {
+                            for(int i = 0; i < points.size(); i += 3) {
+
+                                glm::vec4 vertex1(points[i].x, points[i].y, points[i].z, 1);
+                                glm::vec4 vertex2(points[i + 1].x, points[i + 1].y, points[i + 1].z, 1);
+                                glm::vec4 vertex3(points[i + 2].x, points[i + 2].y, points[i + 2].z, 1);
+
+                                // Apply transforms
+                                glm::mat4 model = scene->getModelMatrix() * group->getModelMatrix() * polytope->getModelMatrix();
+
+                                vertex1 = model * vertex1;
+                                vertex2 = model * vertex2;
+                                vertex3 = model * vertex3;
+
+                                Vec3f v1(vertex1.x, vertex1.y, vertex1.z);
+                                Vec3f v2(vertex2.x, vertex2.y, vertex2.z);
+                                Vec3f v3(vertex3.x, vertex3.y, vertex3.z);
+
+                                Plane trianglePlane = Plane::plane3points(v1, v2, v3);
+                                Vec3f rayIntersection = intersection(mouseRay, trianglePlane);
+
+                                // Check if intersection is inside of the triangle
+                                if(isPointInTriangle(
+                                    rayIntersection.x, rayIntersection.y,
+                                    v1.x, v1.y,
+                                    v2.x, v2.y,
+                                    v3.x, v3.y
+                                ) || isPointInTriangle(
+                                    rayIntersection.y, rayIntersection.z,
+                                    v1.y, v1.z,
+                                    v2.y, v2.z,
+                                    v3.y, v3.z
+                                ) || isPointInTriangle(
+                                    rayIntersection.x, rayIntersection.z,
+                                    v1.x, v1.z,
+                                    v2.x, v2.z,
+                                    v3.x, v3.z
+                                ) ) {
+                                    polytope->setSelected(true);
+                                    if(enablePoint3d) mousePickingPolytope->addVertex(rayIntersection);
+                                    break;
+                                }
+                                polytope->setSelected(false);
+                            }
+                        };
+
+                        // CubePolytope selection
+                        static std::vector<Vec3f> pointsCube = cubePolytope->getVertices();
+                        checkPolytopeSelection(pointsCube, group, mainScene, cubePolytope);
+
+                        // CubePolytope2 selection
+                        static std::vector<Vec3f> pointsCube2 = cubePolytope2->getVertices();
+                        checkPolytopeSelection(pointsCube2, group, mainScene, cubePolytope2);
+
+                        // CubePolytope indices selection
+                        static std::vector<Vec3f> pointsIndices;
+                        static std::vector<Vec3f> cubeVertices = cubePolytopeIndices->getVertices();
+                        static std::vector<unsigned int> cubeIndices = cubePolytopeIndices->getIndices();
+
+                        if(pointsIndices.empty()) {
+
+                            for(int i = 0; i < cubeIndices.size(); i += 3) {
+
+                                Vec3f vertex1 = cubeVertices[cubeIndices[i]];
+                                Vec3f vertex2 = cubeVertices[cubeIndices[i + 1]];
+                                Vec3f vertex3 = cubeVertices[cubeIndices[i + 2]];
+
+                                pointsIndices.push_back(vertex1);
+                                pointsIndices.push_back(vertex2);
+                                pointsIndices.push_back(vertex3);
+                            }
+                        }
+                        checkPolytopeSelection(pointsIndices, group, mainScene, cubePolytopeIndices);
+                    }
+                }*/
+
+                ImGui::End();
+            }
+
+            // Render window
+
+            renderer->clear();
+            renderer->setCamera(camera2);
+            renderer->render();
+            windowFocus = false;
+            {
+                ImGui::Begin("Renderer2", &p_open, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                windowFocus = ImGui::IsWindowFocused() || ImGui::IsWindowHovered();
+
+                // Render graphics as a texture
+                ImGui::Image((void*)(intptr_t)renderer->getFrameCapturer()->getTexture()->getID(), ImGui::GetWindowSize());
+
+                // Resize window
+                static ImVec2 previousSize(100, 100);
+                ImVec2 currentSize = ImGui::GetWindowSize();
+
+                if(currentSize.x != previousSize.x || currentSize.y != previousSize.y) {
+
+                    // Restart trackball camera
+                    float theta = camera2->getTheta(), phi = camera->getPhi();
+                    glm::vec3 center = camera2->getCenter(), up = camera->getUp();
+                    float radius = camera2->getRadius();
+
+                    // Update camera aspect ratio
+                    *camera2 = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, NEAR_PLANE, FAR_PLANE);
+                    camera2->setTheta(theta);  camera2->setPhi(phi);
+                    camera2->setCenter(center); camera2->setUp(up);
+                    camera2->setRadius(radius);
+
+                    // Restart fps camera
+                    //*fpsCamera = *FPSCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
+                }
+                previousSize = currentSize;
+
+                // Mouse Events
+                ImVec2 size = ImGui::GetWindowSize();
+                ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
+                ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
+                ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, mousePositionAbsolute.y - screenPositionAbsolute.y);
+
+                static bool first = true;
+                static ImVec2 previous(0, 0);
+
+                if(ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+                    if(first) {
+                        previous = mousePositionRelative;
+                        first = false;
+                    }
+                }else first = true;
+
+                // Camera rotation
+                float sensitivity = 5.0;
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Left) && windowFocus) {
+                    float dTheta = (mousePositionRelative.x - previous.x) / size.x;
+                    float dPhi = (mousePositionRelative.y - previous.y) / size.y;
+                    previous = mousePositionRelative;
+                    camera2->rotate(-dTheta * sensitivity, dPhi * sensitivity);
+                }
+
+                // Camera pan
+                /*if(ImGui::IsMouseDragging(ImGuiMouseButton_Right) && windowFocus) {
+                    float dx = (mousePositionRelative.x - previous.x) / (size.x / 2);
+                    float dy = (mousePositionRelative.y - previous.y) / (size.y / 2);
+                    previous = mousePositionRelative;
+                    camera->pan(dx * panSensitivity, -dy * panSensitivity);
+                }*/
+
+                // Camera zoom
+                float zoomSensitivity = 5.0;
+                if(windowFocus) camera2->zoom(ImGui::GetIO().MouseWheel * zoomSensitivity);
 
                 // FPS Camera
                 //updateFPSCamera(mousePositionRelative.x, mousePositionRelative.y);
