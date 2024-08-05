@@ -98,6 +98,8 @@ set(SOURCES
         shapes/Cube.cpp
         shapes/Sphere.cpp
         texture/vendor/stb_image_write.h
+        group/BoundingBox.cpp
+        group/BoundingBox.h
 )
 
 # Compile files

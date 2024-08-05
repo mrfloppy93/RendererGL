@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 
+#include "BoundingBox.h"
 #include "Polytope.h"
 #include "DynamicPolytope.h"
 
@@ -21,6 +22,7 @@ private:
     float pointSize, lineWidth, outliningWidth;
     bool showWire, visible;
     glm::mat4 modelMatrix;
+    BoundingBox boundingBox;
 
     static unsigned long groupCount;
     unsigned long id;
