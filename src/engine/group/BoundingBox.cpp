@@ -20,6 +20,11 @@ BoundingBox::BoundingBox(std::vector<glm::vec3> const& points) {
     set(points);
 }
 
+// create from set of points
+BoundingBox::BoundingBox(std::vector<Vec3f> const& points) {
+    set(points);
+}
+
 //create from maximum and minimum vectors
 BoundingBox::BoundingBox(const glm::vec3 &vMin, const glm::vec3 &vMax) {
     set(vMin, vMax);

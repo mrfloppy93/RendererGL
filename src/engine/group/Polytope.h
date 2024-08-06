@@ -9,6 +9,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "BoundingBox.h"
 #include "engine/opengl/buffer/VertexArray.h"
 #include "engine/opengl/buffer/VertexBuffer.h"
 
@@ -33,6 +34,7 @@ protected:
     VertexArray::Ptr vertexArray;
     VertexBuffer::Ptr vertexBuffer;
     std::vector<Texture::Ptr> textures;
+    BoundingBox::Ptr boundingBox;
     unsigned int vertexLength, indicesLength;
     Material::Ptr material;
     glm::mat4 modelMatrix;
@@ -48,6 +50,8 @@ public:
     Polytope(Polytope&& polytope) noexcept;
     Polytope() = default;
     virtual ~Polytope() = default;
+private:
+    void initBoundingBox();
 protected:
     void setTangentsAndBitangents(Vec3f& vertex0, Vec3f& vertex1, Vec3f& vertex2);
     void calculateTangentsAndBitangents(std::vector<Vec3f>& vertices);
