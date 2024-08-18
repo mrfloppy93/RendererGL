@@ -34,14 +34,13 @@ public:
     // set from vertices
     void set(std::vector<Vec3f> const& vertices);
 
-    void translate(const glm::vec3 &v);
-    void rotate(float degrees, const glm::vec3 &axis);
-    void scale(const glm::vec3 &s);
+    std::vector<Vec3f> getPointsVec3f();
+    void print();
 
     void operator<<(BoundingBox const& bb1);
 };
 
-BoundingBox operator+(BoundingBox const& bb1, BoundingBox const& bb2) {
+inline BoundingBox operator+(BoundingBox const& bb1, BoundingBox const& bb2) {
     glm::vec3 vMin,vMax;
     vMin.x = std::min(bb1.m_vMin.x, bb2.m_vMin.x);
     vMin.y = std::min(bb1.m_vMin.y, bb2.m_vMin.y);

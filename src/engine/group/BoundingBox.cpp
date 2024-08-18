@@ -5,6 +5,7 @@
 #include "BoundingBox.h"
 
 #include <cfloat>
+#include <glm/ext/matrix_transform.hpp>
 
 BoundingBox::BoundingBox() {
     m_vMin = glm::vec3(std::numeric_limits<float>::max());
@@ -85,6 +86,26 @@ void BoundingBox::set(std::vector<Vec3f> const& vertices) {
     }
 
     set(m_vMin, m_vMax);
+}
+
+std::vector<Vec3f> BoundingBox::getPointsVec3f() {
+    std::vector<Vec3f> v3f;
+    for(auto p: m_points)
+    {
+        v3f.emplace_back(p.x,p.y,p.z);
+    }
+    return v3f;
+}
+
+void BoundingBox::print() {
+    std::cout << "BoundingBox: " << std::endl << "Vertices: " << std::endl;
+    for(auto p: m_points)
+    {
+        std::cout << p.x << " " << p.y << " " << p.z << std::endl;
+    }
+    std::cout << std::endl;
+    std::cout << "vMin: " << m_vMin.x << " " << m_vMin.y << " " << m_vMin.z << std::endl;
+    std::cout << "vMax: " <<  m_vMax.x << " " << m_vMax.y << " " << m_vMax.z << std::endl << std::endl;
 }
 
 void BoundingBox::operator<<(BoundingBox const& bb1) {

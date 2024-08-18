@@ -76,6 +76,8 @@ public:
     inline VertexBuffer::Ptr& getVertexBuffer() { return vertexBuffer; }
     inline IndexBuffer::Ptr& getIndexBuffer() { return vertexBuffer->getIndexBuffer(); }
 
+    inline BoundingBox::Ptr& getBoundingBox() { return boundingBox; }
+
     inline void addTexture(const Texture::Ptr& texture) { textures.push_back(texture); }
     inline void removeTexture(int index) { textures.erase(textures.begin() + index); }
     inline std::vector<Texture::Ptr>& getTextures() { return textures; }

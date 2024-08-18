@@ -25,6 +25,7 @@ Polytope::Polytope(const Polytope& polytope)
     vertexLength(polytope.vertexLength), indicesLength(polytope.indicesLength), material(polytope.material),
     modelMatrix(polytope.modelMatrix), selected(polytope.selected), faceCulling(polytope.faceCulling),
     emissionStrength(polytope.emissionStrength), tangentAndBitangents(polytope.tangentAndBitangents) {
+    initBoundingBox();
 }
 
 Polytope::Polytope(Polytope&& polytope) noexcept 
@@ -33,6 +34,7 @@ Polytope::Polytope(Polytope&& polytope) noexcept
     material(std::move(polytope.material)), modelMatrix(std::move(polytope.modelMatrix)), selected(polytope.selected),
     faceCulling(polytope.faceCulling), emissionStrength(polytope.emissionStrength),
     tangentAndBitangents(polytope.tangentAndBitangents) {
+    initBoundingBox();
 }
 
 void Polytope::setTangentsAndBitangents(Vec3f& vertex0, Vec3f& vertex1, Vec3f& vertex2) {
