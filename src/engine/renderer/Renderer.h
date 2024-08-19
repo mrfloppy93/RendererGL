@@ -30,9 +30,6 @@
 
 class Renderer {
     GENERATE_PTR(Renderer)
-    enum class ShadowMappingProcedure {
-        Simple, CSM, PSSM, TSM
-    };
 
 private:
     // Shaders
@@ -69,7 +66,6 @@ private:
     // Shadow Mapping
     std::vector<FrameBuffer::Ptr> depthMapFBOVector;
     std::vector<DepthTexture::Ptr> depthMapVector;
-    ShadowMappingProcedure shadowMappingProcedure;
     std::vector<float> shadowCascadeLevels;
     int num_cascades;
 
@@ -101,7 +97,7 @@ private:
     FrameCapturer::Ptr frameCapturer;
 
 public:
-    Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, ShadowMappingProcedure _shadowMappingProcedure);
+    Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight);
     Renderer();
     ~Renderer() = default;
 private:
@@ -210,7 +206,6 @@ public:
     inline glm::vec3& getShadowLightPos() { return shadowLightPos; }
 
     inline void setShadowMapping(bool shadowMapping) { this->shadowMapping = shadowMapping; }
-    inline ShadowMappingProcedure getShadowMappingProcedure() { return shadowMappingProcedure; }
     inline bool isShadowMapping() const { return shadowMapping; }
 
     inline ShaderProgram::Ptr& getShaderProgram() { return shaderProgram; }

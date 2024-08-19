@@ -10,7 +10,7 @@
 #define SHADOW_MAP_WIDTH 2048
 #define SHADOW_MAP_HEIGHT 2048
 
-Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, ShadowMappingProcedure _shadowMappingProcedure)
+Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     : camera(nullptr), 
     hasCamera(false),
     cameraNearPlane(NEAR_PLANE),
@@ -19,7 +19,6 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, Sh
     nLights(0),
     projection(glm::mat4(1.f)), 
     view(glm::mat4(1.f)),
-    shadowMappingProcedure(_shadowMappingProcedure),
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
@@ -42,7 +41,7 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, Sh
 }
 
 Renderer::Renderer() 
-    : Renderer(0, 0, ShadowMappingProcedure::Simple) {
+    : Renderer(0, 0) {
 }
 
 void Renderer::loadFunctionsGL() {
@@ -864,35 +863,11 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
 }
 
 void Renderer::calculateCascadeLevels() {
-    switch (shadowMappingProcedure) {
-        // Simple - No different levels
-        case ShadowMappingProcedure::Simple : {
-            shadowCascadeLevels = {
-                //cameraFarPlane/5.0f
-            };
-            break;
-        }
-        // CSM - Fixed Cascade Levels
-        case ShadowMappingProcedure::CSM : {
-            for(int i = 1; i < 3; ++i) {
-                float splitPos = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
-                //float splitPos = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
-                shadowCascadeLevels.push_back(splitPos);
-            }
-            break;
-        }
-        // PSSM
-        case ShadowMappingProcedure::PSSM : {
 
-        }
-        // TSM
-        case ShadowMappingProcedure::TSM : {
-
-        }
-        default: {
-            shadowCascadeLevels = {};
-            break;
-        }
+    for(int i = 1; i < 3; ++i) {
+        float splitPos = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
+        //float splitPos = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+        shadowCascadeLevels.push_back(splitPos);
     }
     num_cascades = shadowCascadeLevels.size() + 1;
 }
@@ -900,7 +875,7 @@ void Renderer::calculateCascadeLevels() {
 void Renderer::takeSnapshot() {
     for(int i = 0; i < num_cascades; ++i) {
         // Save the texture to an image file
-        std::string filename = "depth_map_" + std::to_string(static_cast<int>(getShadowMappingProcedure())) + "_" + std::to_string(i) + ".png";
+        std::string filename = "depth_map_" + std::to_string(i) + ".png";
         if (depthMapVector[i]->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, filename.c_str())) {
             std::cout << "Image saved successfully!" << std::endl;
         } else {

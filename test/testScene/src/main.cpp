@@ -65,7 +65,7 @@ int main() {
     renderer->addLight(light2);
 
     // Shadow Mappint
-    renderer->setShadowMapping(false);
+    renderer->setShadowMapping(true);
     renderer->setShadowLightPos(light2.getPosition());
 
     // Camera
