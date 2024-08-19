@@ -8,6 +8,7 @@
 FPSCamera::FPSCamera(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix) 
     : Camera(projectionMatrix, viewMatrix), cameraFront(glm::vec3(0, 0, -1)), yaw(0.0f), pitch(0),
     lastX(0), lastY(0), sensitivity(DEFAULT_SENSITIVITY), cameraSpeed(DEFAULT_CAMERA_SPEED) {
+	this->type = CameraType::FPS;
     center = glm::vec3(0, 0, 0);
     up = glm::vec3(0, -1, 0);
     eye = glm::vec3(0, 0, 0);

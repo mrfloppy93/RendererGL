@@ -9,10 +9,14 @@
 
 class Camera {
     GENERATE_PTR(Camera)
+    enum class CameraType {
+        Trackball, FPS, None
+    };
 protected:
     glm::mat4 projectionMatrix;
     glm::mat4 viewMatrix;
     glm::vec3 eye, center, up;
+    CameraType type;
     Camera(const glm::mat4& _projectionMatrix, const glm::mat4& _viewMatrix);
 public:
     Camera() = default;
@@ -33,6 +37,7 @@ public:
     virtual glm::vec3& getEye() { return eye; }
     virtual glm::vec3& getCenter() { return center; }
     virtual glm::vec3& getUp() { return up; }
+    virtual CameraType getType() { return type; }
 
     inline void setEye(const glm::vec3& eye) { this->eye = eye; }
     inline void setCenter(const glm::vec3& center) { this->center = center; }

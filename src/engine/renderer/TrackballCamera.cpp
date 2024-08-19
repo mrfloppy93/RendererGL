@@ -4,6 +4,7 @@
 
 TrackballCamera::TrackballCamera(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix)
     : Camera(projectionMatrix, viewMatrix), theta(M_PI), phi(M_PI * 2), radius(0) {
+    this->type = CameraType::Trackball;
 }
 
 TrackballCamera::Ptr TrackballCamera::orthoCamera(float left, float right, float bottom, float top, float zNear, float zFar) {

@@ -4,13 +4,13 @@
 
 #include "TrackballCamera.h"
 
+#define NEAR_PLANE 0.1
+#define FAR_PLANE 500
+
 #define SHADOW_MAP_WIDTH 2048
 #define SHADOW_MAP_HEIGHT 2048
 
-#define NEAR_PLANE 0.1
-#define FAR_PLANE 300.0
-
-Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
+Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight, ShadowMappingProcedure _shadowMappingProcedure)
     : camera(nullptr), 
     hasCamera(false),
     cameraNearPlane(NEAR_PLANE),
@@ -18,14 +18,13 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     hasLight(false), 
     nLights(0),
     projection(glm::mat4(1.f)), 
-    view(glm::mat4(1.f)), 
-    depthMapFBO(nullptr),
-    depthMap(nullptr),
+    view(glm::mat4(1.f)),
+    shadowMappingProcedure(_shadowMappingProcedure),
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
-    shadowMapping(false), 
-    exposure(1.0f), 
+    shadowMapping(false),
+    exposure(1.0f),
     hdr(false), 
     gammaCorrection(false), 
     pbr(false), 
@@ -43,7 +42,7 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
 }
 
 Renderer::Renderer() 
-    : Renderer(0, 0) {
+    : Renderer(0, 0, ShadowMappingProcedure::Simple) {
 }
 
 void Renderer::loadFunctionsGL() {
@@ -379,10 +378,24 @@ void Renderer::pbrMVPuniform(const glm::mat4& model) {
 
 void Renderer::shadowMappingUniforms() {
     if(!shadowMapping) return;
-    depthMap->bind();
-    shaderProgramLighting->uniformInt("shadowMap", depthMap->getID() - 1);
-    shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+    for(int i = 0; i < num_cascades; ++i) {
+        depthMapVector[i]->bind();
+        shaderProgramLighting->uniformInt("shadowMap[" + std::to_string(i) + "]", depthMapVector[i]->getID() - 1);
+
+        shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
+    }
+
+    for(size_t i = 0; i < shadowCascadeLevels.size(); i++)
+    {
+        shaderProgramLighting->uniformFloat("cascadePlaneDistances[" + std::to_string(i) + "]", shadowCascadeLevels[i]);
+        //std::cout << "cascadePlaneDistances[" + std::to_string(i) + "] : " << shadowCascadeLevels[i] << std::endl;
+    }
+
+    //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
+    shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
+    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
 }
 
 void Renderer::setFaceCulling(const Polytope::Ptr& polytope) {
@@ -406,22 +419,31 @@ void Renderer::setViewport(unsigned int viewportWidth, unsigned int viewportHeig
 }
 
 void Renderer::initShadowMapping() {
- 
-    depthMapFBO = FrameBuffer::New();
-
-    depthMap = DepthTexture::New(SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
-    depthMap->bind();
-
-    depthMapFBO->bind();
-    depthMapFBO->toTexture(GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap->getID());
-
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    
-    depthMapFBO->unbind();
-
     shaderProgramLighting->useProgram();
-    shaderProgramLighting->uniformInt("shadowMap", depthMap->getID() - 1);
+
+    calculateCascadeLevels();
+
+    for(int i = 0; i < num_cascades; ++i) {
+
+        depthMapFBOVector.push_back(FrameBuffer::New());
+        depthMapVector.push_back(DepthTexture::New(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT));
+
+        depthMapVector[i]->bind();
+        depthMapFBOVector[i]->bind();
+
+        depthMapFBOVector[i]->toTexture(
+            GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_2D,
+            depthMapVector[i]->getID()
+            );
+
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+
+        depthMapFBOVector[i]->unbind();
+
+        shaderProgramLighting->uniformInt("shadowMap[" + std::to_string(i) + "]", depthMapVector[i]->getID() - 1);
+    }
 }
 
 void Renderer::initHDR() {
@@ -492,26 +514,21 @@ void Renderer::renderToDepthMap() {
 
     loadPreviousFBO();
 
-    glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_WIDTH);
-    depthMapFBO->bind();
-
-    // Shaders
-    lightSpaceMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
-
     shaderProgramDepthMap->useProgram();
-    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    lightSpaceMatrices = getLightSpaceMatrices();
 
-    // Draw
-    glClear(GL_DEPTH_BUFFER_BIT);
+    for(int i = 0; i < num_cascades; ++i) {
+        glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+        depthMapFBOVector[i]->bind();
+        shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrices[i]);
 
-    renderScenesToDepthMap(scenes);
+        // Draw
+        glClear(GL_DEPTH_BUFFER_BIT);
 
-    // Save the texture to an image file
-    /*if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map.png")) {
-        std::cout << "Image saved successfully!" << std::endl;
-    } else {
-        std::cerr << "Failed to save image." << std::endl;
-    }*/
+        renderScenesToDepthMap(scenes);
+
+        depthMapFBOVector[i]->unbind();
+    }
 
     bindPreviousFBO();
 }
@@ -741,49 +758,6 @@ void Renderer::bindPreviousFBO() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions for cascaded shadow mapping
-
-void Renderer::setShadowMappingProcedure(int procedure) {
-    switch (procedure) {
-        // BASE
-        case 0 : {
-            Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);
-            std::cerr << "Switched to BASE" << std::endl;
-            break;
-        }
-        // CSM
-        case 1 : {
-            Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShaderCSM,fragmentDepthMapShaderCSM);
-            std::cerr << "Switched to CSM" << std::endl;
-            break;
-        }
-        // PSSM
-        case 2 : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to PSSM" << std::endl;
-            break;
-        }
-        // TSM
-        case 3 : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to TSM" << std::endl;
-            break;
-        }
-        default: {
-            setShadowMapping(false);
-            setShadowMappingProcedure(0);
-            break;
-        }
-    }
-}
-
 std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view) {
     const auto inv = glm::inverse(proj * view);
 
@@ -806,14 +780,18 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
 
 // get frustum corners from camera-frustum
 std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace() {
-    return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
+return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
 }
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
+    //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
+    if(camera->getType() == Camera::CameraType::Trackball) {
+        cameraFovy = glm::radians(dynamic_cast<TrackballCamera*>(camera.get())->getRadius());
+    }
     const auto proj = glm::perspective(
-        cameraFovy,
+            cameraFovy,
             (float) getViewportWidth()/(float) getViewportHeight(),
             nearPlane,
             farPlane);
@@ -845,18 +823,88 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         maxZ = std::max(maxZ, trf.z);
     }
 
-    constexpr float zMult = 1.0f;
+    constexpr float zMult = 30.0f;
     if(minZ < 0) minZ *= zMult;
     else minZ /= zMult;
     if(maxZ < 0) maxZ /= zMult;
     else maxZ *= zMult;
 
+    const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
+
     //std::cout << "minX: " << minX << "\tmaxX: " << maxX << std::endl;
     //std::cout << "minY: " << minY << "\tmaxY: " << maxY << std::endl;
     //std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
 
-    const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
-
     return lightProjection * lightView;
 
+}
+
+std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
+    std::vector<glm::mat4> ret;
+    if(shadowCascadeLevels.size() == 0) {
+        ret.push_back(getLightSpaceMatrix(cameraNearPlane, cameraFarPlane));
+        return ret;
+    }
+    for (size_t i = 0; i <= shadowCascadeLevels.size(); ++i)
+    {
+        if (i == 0)
+        {
+            ret.push_back(getLightSpaceMatrix(cameraNearPlane, shadowCascadeLevels[i]));
+        }
+        else if (i < shadowCascadeLevels.size())
+        {
+            ret.push_back(getLightSpaceMatrix(shadowCascadeLevels[i - 1], shadowCascadeLevels[i]));
+        }
+        else
+        {
+            ret.push_back(getLightSpaceMatrix(shadowCascadeLevels[i - 1], cameraFarPlane));
+        }
+    }
+    return ret;
+}
+
+void Renderer::calculateCascadeLevels() {
+    switch (shadowMappingProcedure) {
+        // Simple - No different levels
+        case ShadowMappingProcedure::Simple : {
+            shadowCascadeLevels = {
+                //cameraFarPlane/5.0f
+            };
+            break;
+        }
+        // CSM - Fixed Cascade Levels
+        case ShadowMappingProcedure::CSM : {
+            for(int i = 1; i < 3; ++i) {
+                float splitPos = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
+                //float splitPos = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+                shadowCascadeLevels.push_back(splitPos);
+            }
+            break;
+        }
+        // PSSM
+        case ShadowMappingProcedure::PSSM : {
+
+        }
+        // TSM
+        case ShadowMappingProcedure::TSM : {
+
+        }
+        default: {
+            shadowCascadeLevels = {};
+            break;
+        }
+    }
+    num_cascades = shadowCascadeLevels.size() + 1;
+}
+
+void Renderer::takeSnapshot() {
+    for(int i = 0; i < num_cascades; ++i) {
+        // Save the texture to an image file
+        std::string filename = "depth_map_" + std::to_string(static_cast<int>(getShadowMappingProcedure())) + "_" + std::to_string(i) + ".png";
+        if (depthMapVector[i]->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, filename.c_str())) {
+            std::cout << "Image saved successfully!" << std::endl;
+        } else {
+            std::cerr << "Failed to save image." << std::endl;
+        }
+    }
 }

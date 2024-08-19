@@ -71,15 +71,8 @@ int main() {
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
-    camera->setPhi(5.0);
-    camera->setTheta(2.5);
-    camera->zoom(-60);
-
-    // Camera
-    TrackballCamera::Ptr camera2 = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
-    camera2->setPhi(2.0);
-    camera2->setTheta(2.5);
-    camera2->zoom(-60);
+    camera->zoom(-90);
+    camera->rotate(3.5, 5.0);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
@@ -91,14 +84,6 @@ int main() {
     dogPoly->setFaceCulling(Polytope::FaceCulling::BACK);
     dogPoly->rotate(-90, glm::vec3(1,0,0));
     dogPoly->scale(glm::vec3(.2));
-
-    std::vector<Vec3f> bb = dogPoly->getBoundingBox()->getPointsVec3f();
-    dogPoly->getBoundingBox()->print();
-    const Shape::Ptr bbDog = Shape::New(bb);
-    bbDog->setFaceCulling(Polytope::FaceCulling::NONE);
-    Group::Ptr bbDogGroup = Group::New();
-    bbDogGroup->add(bbDog);
-    bbDogGroup->setShowWire(true);
 
     const Model::Ptr dog2 = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
     const Polytope::Ptr dog2Poly = dog2->getPolytopes()[0];
@@ -130,7 +115,6 @@ int main() {
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
     scene->addGroup(cubeGroup);
-    scene->addGroup(bbDogGroup);
 
 
     renderer->addScene(scene);
@@ -250,7 +234,7 @@ int main() {
                 if(previousShadowMapping != shadowMapping) {
                     if(!shadowMapping) {
                         shadowProcedure = 0;
-                        renderer->setShadowMappingProcedure(shadowProcedure);
+                        //renderer->setShadowMappingProcedure(shadowProcedure);
                     }
                     previousShadowMapping = shadowMapping;
                 }
@@ -270,6 +254,11 @@ int main() {
                     // activate TSM, deactivate other procedures
                     renderer->setShadowMappingProcedure(shadowProcedure);
                 }*/
+                ImGui::TextColored(ImColor(200, 150, 255), "Snapshot");
+
+                if(ImGui::Button("Take Snapshot")) {
+                    renderer->takeSnapshot();
+                }
 
                 ImGui::End();
             }
@@ -336,8 +325,6 @@ int main() {
 
                 ImGui::End();
             }
-
-            renderer->setCamera(camera);
             // Render window
             static bool windowFocus = false;
             {
@@ -359,7 +346,7 @@ int main() {
                     float radius = camera->getRadius();
 
                     // Update camera aspect ratio
-                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, NEAR_PLANE, FAR_PLANE);
+                    *camera = *TrackballCamera::perspectiveCamera(glm::radians(45.0f), currentSize.x  / currentSize.y, 0.1, 1000);
                     camera->setTheta(theta);  camera->setPhi(phi);
                     camera->setCenter(center); camera->setUp(up);
                     camera->setRadius(radius);
