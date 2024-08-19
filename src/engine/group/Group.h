@@ -22,15 +22,19 @@ private:
     float pointSize, lineWidth, outliningWidth;
     bool showWire, visible;
     glm::mat4 modelMatrix;
-    BoundingBox boundingBox;
-
+    BoundingBox::Ptr boundingBox;
     static unsigned long groupCount;
     unsigned long id;
+    bool shadowCaster;
+
+private:
+    void updateBoundingBox();
 public:
     Group(unsigned int _primitive, bool _showWire = false);
     Group();
     ~Group() = default;
 public:
+    void add(const Polytope::Ptr& polytope);
     void removePolytope(Polytope::Ptr& polytope);
     bool isSelected();
     void setSelected(bool selected);
@@ -39,7 +43,7 @@ public:
     inline void rotate(float degrees, const glm::vec3& axis) { modelMatrix = glm::rotate(modelMatrix, glm::radians(degrees), axis); }
     inline void scale(const glm::vec3& s) { modelMatrix = glm::scale(modelMatrix, s); }
 
-    inline void add(const Polytope::Ptr& polytope) { polytopes.push_back(polytope); }
+    //inline void add(const Polytope::Ptr& polytope) { polytopes.push_back(polytope); }
     inline std::vector<Polytope::Ptr>& getPolytopes() { return polytopes; }
 
     inline void removePolytope(int index) { polytopes.erase(polytopes.begin() + index); }
@@ -65,4 +69,7 @@ public:
     inline void setOutliningWidth(float outliningWidth) { this->outliningWidth = outliningWidth; }
 
     inline unsigned long getID() const { return id; }
+
+    inline void setShadowCaster(bool shadowCaster) { this->shadowCaster = shadowCaster; }
+    [[nodiscard]] inline bool isShadowCaster() const { return shadowCaster; }
 };

@@ -32,7 +32,7 @@ BoundingBox::BoundingBox(const glm::vec3 &vMin, const glm::vec3 &vMax) {
 }
 
 // set from set of points
-bool BoundingBox::set(std::vector<glm::vec3> const& points) {
+void BoundingBox::set(std::vector<glm::vec3> const& points) {
 
     m_vMin = glm::vec3(std::numeric_limits<float>::max());
     m_vMax = glm::vec3(-std::numeric_limits<float>::max());
@@ -47,9 +47,7 @@ bool BoundingBox::set(std::vector<glm::vec3> const& points) {
         if(p.y > m_vMax.y) m_vMax.y = p.y;
         if(p.z > m_vMax.z) m_vMax.z = p.z;
     }
-
     set(m_vMin, m_vMax);
-
 }
 
 //set from maximum and minimum vectors
@@ -106,8 +104,4 @@ void BoundingBox::print() {
     std::cout << std::endl;
     std::cout << "vMin: " << m_vMin.x << " " << m_vMin.y << " " << m_vMin.z << std::endl;
     std::cout << "vMax: " <<  m_vMax.x << " " << m_vMax.y << " " << m_vMax.z << std::endl << std::endl;
-}
-
-void BoundingBox::operator<<(BoundingBox const& bb1) {
-    *this = *this + bb1;
 }
