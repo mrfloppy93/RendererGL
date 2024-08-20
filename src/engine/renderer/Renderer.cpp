@@ -819,19 +819,19 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         max.z = std::max(max.z, trf.z);
     }
 
-    constexpr float zMult = 30.0f;
+    /*constexpr float zMult = 30.0f;
     if(min.z < 0) min.z *= zMult;
     else min.z /= zMult;
     if(max.z < 0) max.z /= zMult;
-    else max.z *= zMult;
+    else max.z *= zMult;*/
 
     const glm::mat4 lightProjection = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
 
-    //const glm::mat4 lightViewProj = lightView * lightProjection;
+    const glm::mat4 lightViewProj = lightView * lightProjection;
 
-    /*BoundingBox::Ptr cropBB = BoundingBox::transform(frustumBBWorld, lightViewProj);
+    BoundingBox::Ptr cropBB = BoundingBox::transform(frustumBBWorld, lightViewProj);
 
-    //cropBB->m_vMin.z = 0.0f;
+    cropBB->m_vMin.z = 0.0f;
     // Create the crop matrix
     glm::vec3 scale, offset;
 
@@ -840,13 +840,16 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     offset.x = -0.5f / (cropBB->m_vMax.x + cropBB->m_vMin.x) * scale.x;
     offset.y = -0.5f / (cropBB->m_vMax.y + cropBB->m_vMin.y) * scale.y;
     scale.z = 1.0f / (cropBB->m_vMax.z - cropBB->m_vMin.z);
-    offset.z = -cropBB->m_vMin.z * scale.z;*/
+    offset.z = -cropBB->m_vMin.z * scale.z;
+
+    glm::mat4 cropMatrix = glm::mat4(scale.x, 0.0f, 0.0f, 0.0f, 0.0f, scale.y, 0.0f, 0.0f, 0.0f, 0.0f,
+              scale.z, 0.0f, offset.x, offset.y, offset.z, 1.0f);
 
     //std::cout << "minX: " << minX << "\tmaxX: " << maxX << std::endl;
     //std::cout << "minY: " << minY << "\tmaxY: " << maxY << std::endl;
     //std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
 
-    return lightView * lightProjection;
+    return lightProjection * lightView * cropMatrix;
 
 }
 
