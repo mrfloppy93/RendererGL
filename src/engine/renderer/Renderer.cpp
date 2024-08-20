@@ -757,51 +757,50 @@ void Renderer::bindPreviousFBO() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions for cascaded shadow mapping
-std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view) {
+BoundingBox::Ptr Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view) {
     const auto inv = glm::inverse(proj * view);
 
-    std::vector<glm::vec4> frustumCorners;
+    std::vector<glm::vec3> frustumCorners;
     for(int x = 0; x < 2; ++x) {
         for(int y = 0; y < 2; ++y) {
             for(int z = 0; z < 2; ++z) {
-                const glm::vec4 pt =
+                const glm::vec3 pt =
                     inv * glm::vec4(
                     2.0f * x - 1.0f,
                     2.0f * y - 1.0f,
                     2.0f * z - 1.0f,
                     1.0f);
-                    frustumCorners.push_back(pt/pt.w);
+                    frustumCorners.push_back(pt);
             }
         }
     }
-    return frustumCorners;
+    BoundingBox::Ptr frustumBB = BoundingBox::New(frustumCorners);
+    return frustumBB;
 }
 
 // get frustum corners from camera-frustum
-std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace() {
-return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
+BoundingBox::Ptr Renderer::getFrustumCornersWorldSpace() {
+    return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
 }
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
-    if(camera->getType() == Camera::CameraType::Trackball) {
-        cameraFovy = glm::radians(dynamic_cast<TrackballCamera*>(camera.get())->getRadius());
-    }
     const auto proj = glm::perspective(
             cameraFovy,
             (float) getViewportWidth()/(float) getViewportHeight(),
             nearPlane,
             farPlane);
-    std::vector<glm::vec4> corners = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
+    BoundingBox::Ptr frustumBBWorld = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
     //calculating lightView-Matrix
     glm::vec3 center = glm::vec3(0,0,0);
 
-    for(const auto& v: corners) {
-        center += glm::vec3(v);
+    for(const auto& v: frustumBBWorld->m_points) {
+        center += v;
     }
-    center /= corners.size();
+    center /= frustumBBWorld->m_points.size();
+
     const auto lightView = glm::lookAt(center + glm::normalize(shadowLightPos), center, glm::vec3(0.0,1.0,0.0));
 
     //calculating lightProjection-Matrix
@@ -812,14 +811,17 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     float minZ = std::numeric_limits<float>::max();
     float maxZ = std::numeric_limits<float>::lowest();
 
-    for(const auto& v: corners) {
-        const auto trf = lightView * v;
-        minX = std::min(minX, trf.x);
-        maxX = std::max(maxX, trf.x);
-        minY = std::min(minY, trf.y);
-        maxY = std::max(maxY, trf.y);
-        minZ = std::min(minZ, trf.z);
-        maxZ = std::max(maxZ, trf.z);
+    auto min = glm::vec3(std::numeric_limits<float>::max());
+    auto max = glm::vec3(std::numeric_limits<float>::lowest());
+
+    for(const auto& v: frustumBBWorld->m_points) {
+        const auto trf = lightView * glm::vec4(v, 1.0);
+        min.x = std::min(min.x, trf.x);
+        max.x = std::max(max.x, trf.x);
+        min.y = std::min(min.y, trf.y);
+        max.y = std::max(max.y, trf.y);
+        min.z = std::min(min.z, trf.z);
+        max.z = std::max(max.z, trf.z);
     }
 
     constexpr float zMult = 30.0f;
@@ -862,11 +864,15 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
     return ret;
 }
 
+// applying the practical split scheme
 void Renderer::calculateCascadeLevels() {
 
+    float lambda = 0.5; // Lambda should be between 0 and 1
+
     for(int i = 1; i < 3; ++i) {
-        float splitPos = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
-        //float splitPos = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
+        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+        float splitPos = lambda * splitPosUni + (1.0 - lambda) * splitPosLog;
         shadowCascadeLevels.push_back(splitPos);
     }
     num_cascades = shadowCascadeLevels.size() + 1;
