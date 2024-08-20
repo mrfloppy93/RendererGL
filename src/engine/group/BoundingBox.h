@@ -7,6 +7,7 @@
 #define BOUNDINGBOX_H
 #include <vector>
 #include <glm/vec3.hpp>
+#include <glm/ext/matrix_float4x4.hpp>
 
 #include "engine/ptr.h"
 #include "engine/Vec3.h"
@@ -35,6 +36,10 @@ public:
 
     std::vector<Vec3f> getPointsVec3f();
     void print();
+
+    static BoundingBox::Ptr transform(const BoundingBox::Ptr &bb, const glm::mat4 &mat);
 };
+
+
 
 #endif //BOUNDINGBOX_H

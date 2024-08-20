@@ -105,3 +105,12 @@ void BoundingBox::print() {
     std::cout << "vMin: " << m_vMin.x << " " << m_vMin.y << " " << m_vMin.z << std::endl;
     std::cout << "vMax: " <<  m_vMax.x << " " << m_vMax.y << " " << m_vMax.z << std::endl << std::endl;
 }
+
+BoundingBox::Ptr BoundingBox::transform(const BoundingBox::Ptr &bb, const glm::mat4 &mat) {
+    std::vector<glm::vec3> points;
+    for(const auto& point: bb->m_points) {
+        auto transformed = glm::vec4(point, 1.0) * mat;
+        points.emplace_back(transformed/transformed.w);
+    }
+    return BoundingBox::New(points);
+}

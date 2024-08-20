@@ -764,18 +764,17 @@ BoundingBox::Ptr Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, co
     for(int x = 0; x < 2; ++x) {
         for(int y = 0; y < 2; ++y) {
             for(int z = 0; z < 2; ++z) {
-                const glm::vec3 pt =
+                const glm::vec4 pt =
                     inv * glm::vec4(
                     2.0f * x - 1.0f,
                     2.0f * y - 1.0f,
                     2.0f * z - 1.0f,
                     1.0f);
-                    frustumCorners.push_back(pt);
+                    frustumCorners.push_back(glm::vec3(pt/pt.w));
             }
         }
     }
-    BoundingBox::Ptr frustumBB = BoundingBox::New(frustumCorners);
-    return frustumBB;
+    return BoundingBox::New(frustumCorners);
 }
 
 // get frustum corners from camera-frustum
@@ -785,6 +784,8 @@ BoundingBox::Ptr Renderer::getFrustumCornersWorldSpace() {
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
+
+
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
     const auto proj = glm::perspective(
@@ -793,10 +794,11 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
             nearPlane,
             farPlane);
     BoundingBox::Ptr frustumBBWorld = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
+
     //calculating lightView-Matrix
     glm::vec3 center = glm::vec3(0,0,0);
 
-    for(const auto& v: frustumBBWorld->m_points) {
+    for(const auto& v : frustumBBWorld->m_points) {
         center += v;
     }
     center /= frustumBBWorld->m_points.size();
@@ -804,13 +806,6 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     const auto lightView = glm::lookAt(center + glm::normalize(shadowLightPos), center, glm::vec3(0.0,1.0,0.0));
 
     //calculating lightProjection-Matrix
-    float minX = std::numeric_limits<float>::max();
-    float maxX = std::numeric_limits<float>::lowest();
-    float minY = std::numeric_limits<float>::max();
-    float maxY = std::numeric_limits<float>::lowest();
-    float minZ = std::numeric_limits<float>::max();
-    float maxZ = std::numeric_limits<float>::lowest();
-
     auto min = glm::vec3(std::numeric_limits<float>::max());
     auto max = glm::vec3(std::numeric_limits<float>::lowest());
 
@@ -825,20 +820,37 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     }
 
     constexpr float zMult = 30.0f;
-    if(minZ < 0) minZ *= zMult;
-    else minZ /= zMult;
-    if(maxZ < 0) maxZ /= zMult;
-    else maxZ *= zMult;
+    if(min.z < 0) min.z *= zMult;
+    else min.z /= zMult;
+    if(max.z < 0) max.z /= zMult;
+    else max.z *= zMult;
 
-    const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
+    const glm::mat4 lightProjection = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
+
+    //const glm::mat4 lightViewProj = lightView * lightProjection;
+
+    /*BoundingBox::Ptr cropBB = BoundingBox::transform(frustumBBWorld, lightViewProj);
+
+    //cropBB->m_vMin.z = 0.0f;
+    // Create the crop matrix
+    glm::vec3 scale, offset;
+
+    scale.x = 2.0f / (cropBB->m_vMax.x - cropBB->m_vMin.x);
+    scale.y = 2.0f / (cropBB->m_vMax.y - cropBB->m_vMin.y);
+    offset.x = -0.5f / (cropBB->m_vMax.x + cropBB->m_vMin.x) * scale.x;
+    offset.y = -0.5f / (cropBB->m_vMax.y + cropBB->m_vMin.y) * scale.y;
+    scale.z = 1.0f / (cropBB->m_vMax.z - cropBB->m_vMin.z);
+    offset.z = -cropBB->m_vMin.z * scale.z;*/
 
     //std::cout << "minX: " << minX << "\tmaxX: " << maxX << std::endl;
     //std::cout << "minY: " << minY << "\tmaxY: " << maxY << std::endl;
     //std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
 
-    return lightProjection * lightView;
+    return lightView * lightProjection;
 
 }
+
+
 
 std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
     std::vector<glm::mat4> ret;
