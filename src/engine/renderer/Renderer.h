@@ -142,6 +142,7 @@ private:
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
     std::vector<glm::mat4> getLightSpaceMatrices();
     void calculateCascadeLevels();
+    static BoundingBox::Ptr createSceneDependentBB(const std::vector<Scene::Ptr>& scenes, const BoundingBox::Ptr& splitFrustumLightViewSpace, const glm::mat4& lightView, const glm::mat4& lightProj);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);

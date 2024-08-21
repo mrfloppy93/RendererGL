@@ -105,14 +105,18 @@ int main() {
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
     groundPoly->scale(glm::vec3(5));
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
+    Group::Ptr terrain = Group::New();
+    terrain->setShadowCaster(false);
+    terrain->add(groundPoly);
 
     Group::Ptr group = Group::New();
     group->add(dogPoly);
-    group->add(groundPoly);
+    //group->add(groundPoly);
     group->add(dog2Poly);
     //group->add(cube);
 
     Scene::Ptr scene = Scene::New();
+    scene->addGroup(terrain);
     scene->addGroup(group);
     scene->addGroup(cubeGroup);
 
@@ -225,7 +229,7 @@ int main() {
 
                 ImGui::TextColored(ImColor(200, 150, 255), "Shadows");
 
-                static bool shadowMapping = false;
+                static bool shadowMapping = true;
                 ImGui::Checkbox("Shadow mapping", &shadowMapping);
                 renderer->setShadowMapping(shadowMapping);
 
