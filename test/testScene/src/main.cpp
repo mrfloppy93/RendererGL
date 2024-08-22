@@ -10,6 +10,7 @@
 
 #include <GLFW/glfw3.h>
 #include "ImguiStyles.h"
+#include "../../../src/engine/group/BBVisuals.h"
 #include "engine/shapes/Sphere.h"
 #include "imgui/imgui_internal.h"
 
@@ -94,6 +95,8 @@ int main() {
     dog2Poly->rotate(-90, glm::vec3(1,0,0));
     dog2Poly->scale(glm::vec3(.3));
 
+    Group::Ptr dogBB = BBVisuals::New(dog2Poly);
+
     Cube::Ptr cube = Cube::New();
     cube->translate(glm::vec3(-10,5,-10));
     cube->scale(glm::vec3(10));
@@ -117,6 +120,7 @@ int main() {
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(terrain);
+    scene->addGroup(dogBB);
     scene->addGroup(group);
     scene->addGroup(cubeGroup);
 
