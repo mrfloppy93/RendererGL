@@ -100,6 +100,8 @@ set(SOURCES
         texture/vendor/stb_image_write.h
         group/BoundingBox.cpp
         group/BoundingBox.h
+        group/BBVisuals.cpp
+        group/BBVisuals.h
 )
 
 # Compile files
