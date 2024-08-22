@@ -137,8 +137,7 @@ private:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Functions for Cascaded Shadow Mapping
-    BoundingBox::Ptr getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
-    BoundingBox::Ptr getFrustumCornersWorldSpace();
+    static std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
     std::vector<glm::mat4> getLightSpaceMatrices();
     void calculateCascadeLevels();
