@@ -121,16 +121,16 @@ bool BoundingBox::contains(const BoundingBox::Ptr& bb) {
 }
 
 /**
- * Check if the bounding boxes intersect
+ * Check if the 1st bounding box intersects with the 2nd bounding box, both in the same coordinate system.
  * @param bb1 the bounding box to check
  * @param bb2 the bounding box to check
  * @return true if the bounding boxes intersect
  */
 bool BoundingBox::intersect(const BoundingBox::Ptr& bb1, const BoundingBox::Ptr& bb2) {
-    return std::any_of(bb1->m_points.begin(), bb1->m_points.end(), [&](const auto& p) {
-        return      p.x < bb2->m_vMax.x && p.x > bb2->m_vMin.x
-                &&  p.y < bb2->m_vMax.y && p.y > bb2->m_vMin.y
-                &&  p.z < bb2->m_vMax.z && p.z > bb2->m_vMin.z;
+    return std::any_of(bb2->m_points.begin(), bb2->m_points.end(), [&](const auto& p) {
+        return      p.x < bb1->m_vMax.x && p.x > bb1->m_vMin.x
+                &&  p.y < bb1->m_vMax.y && p.y > bb1->m_vMin.y
+                &&  p.z < bb1->m_vMax.z && p.z > bb1->m_vMin.z;
     });
 }
 

@@ -822,11 +822,11 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         max.z = std::max(max.z, trf.z);
     }
 
-    constexpr float zMult = 30.0f;
+    /*constexpr float zMult = 10.0f;
     if(min.z < 0) min.z *= zMult;
     else min.z /= zMult;
     if(max.z < 0) max.z /= zMult;
-    else max.z *= zMult;
+    else max.z *= zMult;*/
 
     const auto splitFrustumLightViewSpace = BoundingBox::New(min,max);
 
@@ -838,6 +838,11 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
                                          splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
                                          splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
+
+    /*std::cout << "splitFrustumSceneIndependent: " << std::endl;
+    splitFrustumLightViewSpace->print();
+    std::cout << "splitFrustumSceneDependent: " << std::endl;
+    splitFrustumSceneDependent->print();*/
 
     return lightProjNew * lightView;
 }
@@ -902,7 +907,7 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(  const std::vector<Scene::Ptr
     BoundingBox::Ptr resultBB = nullptr;
 
     // transform splitfrustum to light-clip-space
-    const auto splitFrustumLightClipSpace = BoundingBox::transform(splitFrustumLightViewSpace, lightProj);
+    //const auto splitFrustumLightClipSpace = BoundingBox::transform(splitFrustumLightViewSpace, lightProj);
 
     for(const auto& scene: scenes) {
         for(const auto& group: scene->getGroups()) {
@@ -910,10 +915,10 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(  const std::vector<Scene::Ptr
             for(const auto& poly: group->getPolytopes()) {
                 // transform object-boundingboxes to light-clip-space
                 const auto modelMatrixWorldSpace = scene->getModelMatrix() * group->getModelMatrix() * poly->getModelMatrix();
-                auto lcsbb = BoundingBox::transform(poly->getBoundingBox(), lightProj * lightView * modelMatrixWorldSpace);
+                auto lcsbb = BoundingBox::transform(poly->getBoundingBox(), lightView * modelMatrixWorldSpace);
 
                 // check whether the object is inside the splitfrustum
-                if(BoundingBox::intersect(splitFrustumLightClipSpace, lcsbb)) {
+                if(BoundingBox::intersect(splitFrustumLightViewSpace, lcsbb)) {
                     if(resultBB == nullptr) {
                         resultBB = lcsbb;
                     } else {
@@ -927,14 +932,14 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(  const std::vector<Scene::Ptr
 
     if(resultBB == nullptr) {
         // if no object is inside the splitfrustum, return the splitfrustum
-        resultBB = splitFrustumLightClipSpace;
+        resultBB = splitFrustumLightViewSpace;
     } else {
         // crop the resulting bb with the splitfrustum
-        resultBB = BoundingBox::crop(resultBB, splitFrustumLightClipSpace);
+        resultBB = BoundingBox::crop(resultBB, splitFrustumLightViewSpace);
     }
 
     // transform the bounding box back to view-space and return it
-    return BoundingBox::transform(resultBB, glm::inverse(lightProj));;
+    return resultBB;
 }
 
 
