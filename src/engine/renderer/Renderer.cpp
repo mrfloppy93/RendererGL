@@ -761,7 +761,7 @@ void Renderer::bindPreviousFBO() {
 // Functions for cascaded shadow mapping
 
 /**
- * Create a bounding box of the camera-frustum in world space
+ * Create the corner-points of the camera-frustum in world space
  * @param proj projection matrix
  * @param view view matrix
  * @return bounding box of the frustum corners in world space
@@ -783,8 +783,42 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
             }
         }
     }
+
     return frustumCorners;
 }
+
+std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4 &view, float nearPlane, float farPlane) const {
+    const auto inv = glm::inverse(view);
+
+    float aspectRatio = static_cast<float>(getViewportWidth())/static_cast<float>(getViewportHeight());
+    float fov = 45.0f;
+    float tanHalfHFOV = glm::tan(glm::radians(fov/2.0f));
+    float tanHalfVFOV = glm::tan(glm::radians((fov*aspectRatio)/2.0f));
+
+    std::vector<glm::vec4> frustumCorners;
+
+    float xn = nearPlane * tanHalfHFOV;
+    float xf = farPlane * tanHalfHFOV;
+    float yn = nearPlane * tanHalfVFOV;
+    float yf = farPlane * tanHalfVFOV;
+
+    frustumCorners.emplace_back(xn, yn, nearPlane, 1.0f);
+    frustumCorners.emplace_back(-xn, yn, nearPlane, 1.0f);
+    frustumCorners.emplace_back(xn, -yn, nearPlane, 1.0f);
+    frustumCorners.emplace_back(-xn, -yn, nearPlane, 1.0f);
+
+    frustumCorners.emplace_back(xf, yf, farPlane, 1.0f);
+    frustumCorners.emplace_back(-xf, yf, farPlane, 1.0f);
+    frustumCorners.emplace_back(xf, -yf, farPlane, 1.0f);
+    frustumCorners.emplace_back(-xf, -yf, farPlane, 1.0f);
+
+    for(auto& v : frustumCorners) {
+        v = inv * v;
+    }
+
+    return frustumCorners;
+}
+
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
@@ -797,6 +831,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
             nearPlane,
             farPlane);
     std::vector<glm::vec4> splitFrustumW = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
+    //const auto splitFrustumW = getFrustumCornersWorldSpace(camera->getViewMatrix(), nearPlane, farPlane);
 
     //calculating lightView-Matrix
     glm::vec3 center = glm::vec3(0,0,0);
@@ -822,29 +857,29 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         max.z = std::max(max.z, trf.z);
     }
 
-    /*constexpr float zMult = 10.0f;
+    constexpr float zMult = 10.0f;
     if(min.z < 0) min.z *= zMult;
     else min.z /= zMult;
     if(max.z < 0) max.z /= zMult;
-    else max.z *= zMult;*/
+    else max.z *= zMult;
 
     const auto splitFrustumLightViewSpace = BoundingBox::New(min,max);
 
     const glm::mat4 lightProj = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
 
     // create boundingbox of objects contained in the lights-shadow-frustum
-    const auto splitFrustumSceneDependent = createSceneDependentBB(scenes, splitFrustumLightViewSpace, lightView, lightProj);
+    //const auto splitFrustumSceneDependent = createSceneDependentBB(scenes, splitFrustumLightViewSpace, lightView, lightProj);
     // recreate the lights-projection-matrix with the new bounds
-    const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
-                                         splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
-                                         splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
+    //const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
+    //                                     splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
+    //                                     splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
 
     /*std::cout << "splitFrustumSceneIndependent: " << std::endl;
     splitFrustumLightViewSpace->print();
     std::cout << "splitFrustumSceneDependent: " << std::endl;
     splitFrustumSceneDependent->print();*/
 
-    return lightProjNew * lightView;
+    return lightProj * lightView;
 }
 
 
