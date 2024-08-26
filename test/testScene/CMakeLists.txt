@@ -36,7 +36,7 @@ set(SOURCES
 
 # Copy shaders into build folder
 set(SHADERS_PATH "${CMAKE_SOURCE_DIR}/src/engine/opengl/glsl")
-file(GLOB shaderFiles ${SHADERS_PATH}/*.frag ${SHADERS_PATH}/*.vert)
+file(GLOB shaderFiles ${SHADERS_PATH}/*.frag ${SHADERS_PATH}/*.vert ${SHADERS_PATH}/*.geom)
 foreach(filename ${shaderFiles} )
     file(COPY ${filename} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/glsl)
 endforeach()

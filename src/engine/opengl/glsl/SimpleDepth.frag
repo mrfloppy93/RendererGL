@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 /*
 Since we have no color buffer and disabled the draw and read buffers, 

@@ -36,6 +36,8 @@ set(HEADERS
         opengl/buffer/RenderBuffer.h
         opengl/buffer/MultiSampleRenderBuffer.h
         opengl/shader/Shader.h
+        group/BoundingBox.h
+        group/BBVisuals.h
         group/Polytope.h
         group/DynamicPolytope.h
         group/Group.h
@@ -58,6 +60,7 @@ set(HEADERS
         texture/Texture.h
         texture/CubeMapTexture.h
         texture/DepthTexture.h
+        texture/DepthTexture3D.h
         texture/ColorBufferTexture.h
         texture/MultiSampleTexture.h
         model/Model.h
@@ -75,6 +78,8 @@ set(SOURCES
         opengl/buffer/RenderBuffer.cpp
         opengl/buffer/MultiSampleRenderBuffer.cpp
         opengl/shader/Shader.cpp
+        group/BoundingBox.cpp
+        group/BBVisuals.cpp
         group/Polytope.cpp
         group/DynamicPolytope.cpp
         group/Group.cpp
@@ -91,19 +96,13 @@ set(SOURCES
         texture/Texture.cpp
         texture/CubeMapTexture.cpp
         texture/DepthTexture.cpp
+        texture/DepthTexture3D.cpp
         texture/ColorBufferTexture.cpp
         texture/MultiSampleTexture.cpp
         model/Model.cpp
         shapes/Shape.cpp
         shapes/Cube.cpp
         shapes/Sphere.cpp
-        texture/vendor/stb_image_write.h
-        group/BoundingBox.cpp
-        group/BoundingBox.h
-        group/BBVisuals.cpp
-        group/BBVisuals.h
-        texture/DepthTexture3D.h
-        texture/DepthTexture3D.cpp
 )
 
 # Compile files
