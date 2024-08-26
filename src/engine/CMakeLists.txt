@@ -102,6 +102,8 @@ set(SOURCES
         group/BoundingBox.h
         group/BBVisuals.cpp
         group/BBVisuals.h
+        texture/DepthTexture3D.h
+        texture/DepthTexture3D.cpp
 )
 
 # Compile files

@@ -37,7 +37,7 @@ uniform MaterialMaps materialMaps;
 
 uniform sampler2D diffuseTexture;
 uniform bool shadowMapping;
-uniform sampler2D shadowMap[16];
+uniform sampler2DArray shadowMap3D;
 uniform mat4 lightSpaceMatrices[16];
 uniform float cascadePlaneDistances[16];
 uniform int cascadeCount; // number of frusta - 1
@@ -82,39 +82,7 @@ float ShadowCalculation(vec3 fragPosWorldSpace, vec3 normal, vec3 lightDir)
     // transform to [0,1] range
     projCoords = projCoords * 0.5 + 0.5;
     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-
-    float closestDepth;
-
-    switch(layer) {
-        case 0: {
-                    closestDepth = texture(shadowMap[0], projCoords.xy).r;
-                    break;
-                }
-        case 1: {
-                    closestDepth = texture(shadowMap[1], projCoords.xy).r;
-                    break;
-                }
-        case 2: {
-                    closestDepth = texture(shadowMap[2], projCoords.xy).r;
-                    break;
-                }
-        case 3: {
-                    closestDepth = texture(shadowMap[3], projCoords.xy).r;
-                    break;
-                }
-        case 4: {
-                    closestDepth = texture(shadowMap[4], projCoords.xy).r;
-                    break;
-                }
-        case 5: {
-                    closestDepth = texture(shadowMap[5], projCoords.xy).r;
-                    break;
-                }
-        default:{
-                    closestDepth = texture(shadowMap[0], projCoords.xy).r;
-                    break;
-                }
-    }
+    float closestDepth = texture(shadowMap3D, vec3(projCoords.xy, layer)).r;
     // get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
 

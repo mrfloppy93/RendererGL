@@ -27,6 +27,7 @@
 
 #include "FrameCapturer.h"
 #include "TrackballCamera.h"
+#include "engine/texture/DepthTexture3D.h"
 
 class Renderer {
     GENERATE_PTR(Renderer)
@@ -65,7 +66,7 @@ private:
 
     // Shadow Mapping
     std::vector<FrameBuffer::Ptr> depthMapFBOVector;
-    std::vector<DepthTexture::Ptr> depthMapVector;
+    DepthTexture3D::Ptr depthMap3D;
     std::vector<float> shadowCascadeLevels;
     int num_cascades;
 
@@ -221,7 +222,7 @@ public:
     inline void setViewportHeight(unsigned int viewportHeight) { this->viewportHeight = viewportHeight; }
     inline unsigned int getViewportHeight() const { return viewportHeight; }
 
-    inline std::vector<DepthTexture::Ptr>& getDepthMaps() { return depthMapVector; }
+    inline DepthTexture3D::Ptr& getDepthMaps() { return depthMap3D; }
 
     inline void setHDR(bool hdr) { this->hdr = hdr; }
     inline bool isHDR() const { return hdr; }

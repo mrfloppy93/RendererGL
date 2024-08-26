@@ -379,10 +379,10 @@ void Renderer::pbrMVPuniform(const glm::mat4& model) {
 void Renderer::shadowMappingUniforms() {
     if(!shadowMapping) return;
 
-    for(int i = 0; i < num_cascades; ++i) {
-        depthMapVector[i]->bind();
-        shaderProgramLighting->uniformInt("shadowMap[" + std::to_string(i) + "]", depthMapVector[i]->getID() - 1);
+    depthMap3D->bind();
+    shaderProgramLighting->uniformInt("shadowMap3D", depthMap3D->getID() - 1);
 
+    for(int i = 0; i < num_cascades; ++i) {
         shaderProgramLighting->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
     }
 
@@ -423,27 +423,24 @@ void Renderer::initShadowMapping() {
 
     calculateCascadeLevels();
 
+    depthMap3D = DepthTexture3D::New(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, shadowCascadeLevels);
+    depthMap3D->bind();
+
     for(int i = 0; i < num_cascades; ++i) {
 
         depthMapFBOVector.push_back(FrameBuffer::New());
-        depthMapVector.push_back(DepthTexture::New(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT));
 
-        depthMapVector[i]->bind();
         depthMapFBOVector[i]->bind();
 
-        depthMapFBOVector[i]->toTexture(
-            GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_2D,
-            depthMapVector[i]->getID()
-            );
+        // alternative to functioncall toTexture of FrameBuffer, because it is only for temporary use
+        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthMap3D->getID(), 0, i);
 
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
 
         depthMapFBOVector[i]->unbind();
-
-        shaderProgramLighting->uniformInt("shadowMap[" + std::to_string(i) + "]", depthMapVector[i]->getID() - 1);
     }
+    shaderProgramLighting->uniformInt("shadowMap3D", depthMap3D->getID() - 1);
 }
 
 void Renderer::initHDR() {
@@ -982,7 +979,7 @@ void Renderer::takeSnapshot() {
     for(int i = 0; i < num_cascades; ++i) {
         // Save the texture to an image file
         std::string filename = "depth_map_" + std::to_string(i) + ".png";
-        if (depthMapVector[i]->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, filename.c_str())) {
+        if (depthMap3D->saveTextureArrayLayerToFile(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, i, filename.c_str())) {
             std::cout << "Image saved successfully!" << std::endl;
         } else {
             std::cerr << "Failed to save image." << std::endl;
