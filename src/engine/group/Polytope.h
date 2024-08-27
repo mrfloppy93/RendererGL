@@ -67,6 +67,7 @@ public:
     void updateIndices(std::vector<unsigned int>& indices);
     void removeTexture(const Texture::Ptr& texture);
     void draw(unsigned int primitive, bool showWire = false);
+    void drawInstanced(unsigned int primitive, unsigned int instances, bool showWire = false);
 public:
     inline void translate(const glm::vec3& v) { modelMatrix = glm::translate(modelMatrix, v); }
     inline void rotate(float degrees, const glm::vec3& axis) { modelMatrix = glm::rotate(modelMatrix, glm::radians(degrees), axis); }

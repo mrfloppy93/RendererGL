@@ -167,6 +167,19 @@ void Polytope::draw(unsigned int primitive, bool showWire) {
     unbind();
 }
 
+void Polytope::drawInstanced(unsigned int primitive, unsigned int instances, bool showWire) {
+    bind();
+
+    if(!showWire)   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    else            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    if(!vertexBuffer->HasIndexBuffer()) glDrawArraysInstanced(primitive, 0, vertexLength, instances);
+    else    glDrawElementsInstanced(primitive, indicesLength, GL_UNSIGNED_INT, 0, instances);
+
+    unbind();
+}
+
+
 void Polytope::initBoundingBox() {
     boundingBox = BoundingBox::New(getVertices());
 }
