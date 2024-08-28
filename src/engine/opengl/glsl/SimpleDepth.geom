@@ -1,16 +1,13 @@
 #version 460 core
 
-layout(triangles, invocations = 3) in;
-layout(triangle_strip, max_vertices = 3) out;
+layout(points) in;
+layout(points, max_vertices = 1) out;
 
-uniform mat4 lightSpaceMatrices[16];
-uniform int cascadeCount;
+in int instanceID[];
 
 void main() {
-    for(int i = 0; i <= cascadeCount; ++i) {
-        gl_Position = lightSpaceMatrices[gl_InvocationID] * gl_in[i].gl_Position;
-        gl_Layer = gl_InvocationID;
-        EmitVertex();
-    }
+    gl_Layer = instanceID[0];
+    gl_Position = gl_in[0].gl_Position;
+    EmitVertex();
     EndPrimitive();
 }
