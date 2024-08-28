@@ -1,13 +1,15 @@
 #version 460 core
 
-layout(points) in;
-layout(points, max_vertices = 1) out;
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 3) out;
 
 in int instanceID[];
 
 void main() {
     gl_Layer = instanceID[0];
-    gl_Position = gl_in[0].gl_Position;
-    EmitVertex();
+    for(int i = 0; i < 3; i++) {
+        gl_Position = gl_in[i].gl_Position;
+        EmitVertex();
+    }
     EndPrimitive();
 }
