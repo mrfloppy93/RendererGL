@@ -974,7 +974,7 @@ void Renderer::calculateShadowCastersAABB() {
             {
 
                 // transform objects to light-clip-space and create boundingbox
-                const auto modelView = scene->getModelMatrix() * group->getModelMatrix() * poly->getModelMatrix() * lightViewMatrix;
+                const auto modelView = lightViewMatrix * scene->getModelMatrix() * group->getModelMatrix() * poly->getModelMatrix();
 
                 //calculating light-view-axis-aligned-bounding-box
                 auto min = glm::vec3(std::numeric_limits<float>::max());
@@ -989,6 +989,12 @@ void Renderer::calculateShadowCastersAABB() {
                     min.z = std::min(min.z, trf.z);
                     max.z = std::max(max.z, trf.z);
                 }
+
+                constexpr float zMult = 10.0f;
+                if(min.z < 0) min.z *= zMult;
+                else min.z /= zMult;
+                if(max.z < 0) max.z /= zMult;
+                else max.z *= zMult;
 
                 const auto lcsbb = BoundingBox::New(min,max);
 
