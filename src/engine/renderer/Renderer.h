@@ -29,6 +29,7 @@
 #include "TrackballCamera.h"
 #include "engine/texture/DepthTexture3D.h"
 
+
 class Renderer {
     GENERATE_PTR(Renderer)
 
@@ -70,10 +71,12 @@ private:
     std::vector<float> shadowCascadeLevels;
     int num_cascades;
 
-    glm::mat4 lightSpaceMatrix;
+    glm::mat4 lightViewMatrix;
     std::vector<glm::mat4> lightSpaceMatrices;
     glm::vec3 shadowLightPos;
     bool shadowMapping;
+    std::vector<BoundingBox::Ptr> shadowCastersAABB; // Shadow casters AABB in light-view-space
+    bool initialized;
 
     // HDR
     FrameBuffer::Ptr hdrFBO;
@@ -143,7 +146,8 @@ private:
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
     std::vector<glm::mat4> getLightSpaceMatrices();
     void calculateCascadeLevels();
-    static BoundingBox::Ptr createSceneDependentBB(const std::vector<Scene::Ptr>& scenes, const BoundingBox::Ptr& splitFrustumLightViewSpace, const glm::mat4& lightView, const glm::mat4& lightProj);
+    void calculateShadowCastersAABB();
+    BoundingBox::Ptr createSceneDependentBB(const std::vector<Scene::Ptr>& scenes, const BoundingBox::Ptr& splitFrustumLightViewSpace, const glm::mat4& lightView, const glm::mat4& lightProj);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);
@@ -204,7 +208,7 @@ public:
     inline void disablePBR() { pbr = false; }
     inline void setPBREnabled(bool enable) { pbr = enable; }
 
-    inline void setShadowLightPos(const glm::vec3& shadowLightPos) { this->shadowLightPos = shadowLightPos; }
+    inline void setShadowLightPos(const glm::vec3& shadowLightPos) { this->shadowLightPos = shadowLightPos; initialized = false; }
     inline glm::vec3& getShadowLightPos() { return shadowLightPos; }
 
     inline void setShadowMapping(bool shadowMapping) { this->shadowMapping = shadowMapping; }
