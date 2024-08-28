@@ -142,12 +142,12 @@ private:
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Functions for Cascaded Shadow Mapping
     static std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
-    std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& view, float nearPlane, float farPlane) const;
+    [[nodiscard]] std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& view, float nearPlane, float farPlane) const;
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
     std::vector<glm::mat4> getLightSpaceMatrices();
     void calculateCascadeLevels();
-    void calculateShadowCastersAABB();
-    BoundingBox::Ptr createSceneDependentBB(const std::vector<Scene::Ptr>& scenes, const BoundingBox::Ptr& splitFrustumLightViewSpace, const glm::mat4& lightView, const glm::mat4& lightProj);
+    void calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes);
+    BoundingBox::Ptr createSceneDependentBB(const BoundingBox::Ptr& splitFrustumLightViewSpace);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);

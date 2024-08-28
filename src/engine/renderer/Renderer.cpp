@@ -816,8 +816,6 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4 &vi
 
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
-    //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
-
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
     const auto proj = glm::perspective(
@@ -826,11 +824,8 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
             nearPlane,
             farPlane);
     std::vector<glm::vec4> splitFrustumW = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
-    //const auto splitFrustumW = getFrustumCornersWorldSpace(camera->getViewMatrix(), nearPlane, farPlane);
 
     //calculating lightView-Matrix
-    glm::vec3 center = glm::vec3(0,0,0);
-
     lightViewMatrix = glm::lookAt(glm::normalize(shadowLightPos), glm::vec3(0.0,0.0,0.0), glm::vec3(0.0,1.0,0.0));
 
     //calculating lightProjection-Matrix
@@ -858,16 +853,11 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     const glm::mat4 lightProj = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
 
     // create boundingbox of objects contained in the lights-shadow-frustum
-    const auto splitFrustumSceneDependent = createSceneDependentBB(scenes, splitFrustumLightViewSpace, lightViewMatrix, lightProj);
+    const auto splitFrustumSceneDependent = createSceneDependentBB(splitFrustumLightViewSpace);
     // recreate the lights-projection-matrix with the new bounds
     const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
                                          splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
                                          splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
-
-    /*std::cout << "splitFrustumSceneIndependent: " << std::endl;
-    splitFrustumLightViewSpace->print();
-    std::cout << "splitFrustumSceneDependent: " << std::endl;
-    splitFrustumSceneDependent->print();*/
 
     return lightProjNew * lightViewMatrix;
 }
@@ -918,19 +908,12 @@ void Renderer::calculateCascadeLevels() {
 }
 
 /**
- * @param scenes scenes to create the boundingbox from
  * @param splitFrustumLightViewSpace sourcefrustum in light-view-space as bounds for the created boundingbox
- * @param lightView light-view-matrix
- * @param lightProj light-projection-matrix
  * @return boundingbox in view-space containing all objects in the scenes that are inside the splitfrustum, cropped by the splitfrustum
  */
-BoundingBox::Ptr Renderer::createSceneDependentBB(  const std::vector<Scene::Ptr>& scenes,
-                                                    const BoundingBox::Ptr& splitFrustumLightViewSpace,
-                                                    const glm::mat4& lightView,
-                                                    const glm::mat4& lightProj
-) {
+BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitFrustumLightViewSpace) {
     if(!initialized) {
-        calculateShadowCastersAABB();
+        calculateShadowCastersAABB(scenes);
         initialized = true;
     }
 
@@ -963,7 +946,7 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(  const std::vector<Scene::Ptr
     return resultBB;
 }
 
-void Renderer::calculateShadowCastersAABB() {
+void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
 
     for(const auto& scene: scenes)
     {
@@ -990,7 +973,7 @@ void Renderer::calculateShadowCastersAABB() {
                     max.z = std::max(max.z, trf.z);
                 }
 
-                constexpr float zMult = 10.0f;
+                constexpr float zMult = 30.0f;
                 if(min.z < 0) min.z *= zMult;
                 else min.z /= zMult;
                 if(max.z < 0) max.z /= zMult;
@@ -1001,6 +984,10 @@ void Renderer::calculateShadowCastersAABB() {
                 shadowCastersAABB.emplace_back(lcsbb);
             }
         }
+    }
+
+    for(const auto& scene: scenes) {
+        calculateShadowCastersAABB(scene->getScenes());
     }
 }
 
