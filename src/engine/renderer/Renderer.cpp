@@ -4,11 +4,11 @@
 
 #include "TrackballCamera.h"
 
-#define SHADOW_MAP_WIDTH 2048
-#define SHADOW_MAP_HEIGHT 2048
+#define SHADOW_MAP_WIDTH 1024
+#define SHADOW_MAP_HEIGHT 1024
 
 #define NEAR_PLANE 0.1
-#define FAR_PLANE 300.0
+#define FAR_PLANE 100.0
 
 Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
     : camera(nullptr), 
@@ -858,5 +858,19 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
 
     return lightProjection * lightView;
+}
 
+void Renderer::takeSnapshot() {
+
+    std::string filename = "depth_map_ssm.png";
+    if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, filename.c_str())) {
+        std::cout << "Image saved successfully!" << std::endl;
+    } else {
+        std::cerr << "Failed to save image." << std::endl;
+    }
+
+    for(int i = 0; i < 1; ++i) {
+        // Save the texture to an image file
+
+    }
 }

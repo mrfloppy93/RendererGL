@@ -15,8 +15,8 @@
 #define NEAR_PLANE 0.1
 #define FAR_PLANE 300.0
 
-const int WIDTH = 1280;
-const int HEIGHT = 900;
+const int WIDTH = 1920;
+const int HEIGHT = 1080;
 
 // ImGui functions
 void initImGui(ImGuiIO& io);
@@ -64,42 +64,41 @@ int main() {
     renderer->addLight(light2);
 
     // Shadow Mappint
-    renderer->setShadowMapping(false);
+    renderer->setShadowMapping(true);
     renderer->setShadowLightPos(light2.getPosition());
 
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
-    camera->setPhi(5.0);
-    camera->setTheta(2.5);
-    camera->zoom(-60);
+    camera->zoom(-40);
+    camera->rotate(-1.3, 5.1);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
     // Scene
-    const Model::Ptr dog = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
+    /*const Model::Ptr dog = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
     //Texture::Ptr dogTexture = Texture::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.mtl");
     const Polytope::Ptr dogPoly = dog->getPolytopes()[0];
     //dogPoly->addTexture(dogTexture);
     dogPoly->setFaceCulling(Polytope::FaceCulling::BACK);
     dogPoly->rotate(-90, glm::vec3(1,0,0));
-    dogPoly->scale(glm::vec3(.2));
+    dogPoly->scale(glm::vec3(.2));*/
 
     const Model::Ptr dog2 = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
     const Polytope::Ptr dog2Poly = dog2->getPolytopes()[0];
     //dogPoly->addTexture(dogTexture);
     dog2Poly->setFaceCulling(Polytope::FaceCulling::BACK);
-    dog2Poly->translate(glm::vec3(glm::vec3(5,0,10)));
+    //dog2Poly->translate(glm::vec3(glm::vec3(5,0,10)));
     dog2Poly->rotate(-30, glm::vec3(0,1,0));
     dog2Poly->rotate(-90, glm::vec3(1,0,0));
     dog2Poly->scale(glm::vec3(.3));
 
-    Cube::Ptr cube = Cube::New();
+    /*Cube::Ptr cube = Cube::New();
     cube->translate(glm::vec3(-10,5,-10));
     cube->scale(glm::vec3(10));
     Group::Ptr cubeGroup = Group::New();
     cubeGroup->add(cube);
-    cubeGroup->setShowWire(true);
+    cubeGroup->setShowWire(true);*/
 
     const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
@@ -107,14 +106,14 @@ int main() {
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
 
     Group::Ptr group = Group::New();
-    group->add(dogPoly);
+    //group->add(dogPoly);
     group->add(groundPoly);
     group->add(dog2Poly);
     //group->add(cube);
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
-    scene->addGroup(cubeGroup);
+    //scene->addGroup(cubeGroup);
 
     renderer->addScene(scene);
 
@@ -224,12 +223,12 @@ int main() {
 
                 ImGui::TextColored(ImColor(200, 150, 255), "Shadows");
 
-                static bool shadowMapping = false;
+                static bool shadowMapping = true;
                 ImGui::Checkbox("Shadow mapping", &shadowMapping);
                 renderer->setShadowMapping(shadowMapping);
 
                 static int shadowProcedure = 0;
-                static bool previousShadowMapping = false;
+                static bool previousShadowMapping = true;
                 if(previousShadowMapping != shadowMapping) {
                     if(!shadowMapping) {
                         shadowProcedure = 0;
@@ -253,6 +252,11 @@ int main() {
                     // activate TSM, deactivate other procedures
                     renderer->setShadowMappingProcedure(shadowProcedure);
                 }*/
+                ImGui::TextColored(ImColor(200, 150, 255), "Snapshot");
+
+                if(ImGui::Button("Take Snapshot")) {
+                    renderer->takeSnapshot();
+                }
 
                 ImGui::End();
             }
