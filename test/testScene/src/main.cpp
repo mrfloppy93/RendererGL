@@ -13,7 +13,7 @@
 #include "imgui/imgui_internal.h"
 
 #define NEAR_PLANE 0.1
-#define FAR_PLANE 300.0
+#define FAR_PLANE 100.0
 
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
@@ -84,21 +84,21 @@ int main() {
     dogPoly->rotate(-90, glm::vec3(1,0,0));
     dogPoly->scale(glm::vec3(.2));*/
 
-    const Model::Ptr dog2 = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
+    /*const Model::Ptr dog2 = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
     const Polytope::Ptr dog2Poly = dog2->getPolytopes()[0];
     //dogPoly->addTexture(dogTexture);
     dog2Poly->setFaceCulling(Polytope::FaceCulling::BACK);
     //dog2Poly->translate(glm::vec3(glm::vec3(5,0,10)));
     dog2Poly->rotate(-30, glm::vec3(0,1,0));
     dog2Poly->rotate(-90, glm::vec3(1,0,0));
-    dog2Poly->scale(glm::vec3(.3));
+    dog2Poly->scale(glm::vec3(.3));*/
 
-    /*Cube::Ptr cube = Cube::New();
-    cube->translate(glm::vec3(-10,5,-10));
+    Cube::Ptr cube = Cube::New();
+    cube->translate(glm::vec3(0,5,0));
     cube->scale(glm::vec3(10));
     Group::Ptr cubeGroup = Group::New();
     cubeGroup->add(cube);
-    cubeGroup->setShowWire(true);*/
+    cubeGroup->setShowWire(true);
 
     const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
@@ -108,12 +108,12 @@ int main() {
     Group::Ptr group = Group::New();
     //group->add(dogPoly);
     group->add(groundPoly);
-    group->add(dog2Poly);
+    //group->add(dog2Poly);
     //group->add(cube);
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(group);
-    //scene->addGroup(cubeGroup);
+    scene->addGroup(cubeGroup);
 
     renderer->addScene(scene);
 

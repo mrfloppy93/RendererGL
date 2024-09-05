@@ -4,8 +4,8 @@
 
 #include "TrackballCamera.h"
 
-#define SHADOW_MAP_WIDTH 1024
-#define SHADOW_MAP_HEIGHT 1024
+#define SHADOW_MAP_WIDTH 2048*4
+#define SHADOW_MAP_HEIGHT 2048*4
 
 #define NEAR_PLANE 0.1
 #define FAR_PLANE 100.0
