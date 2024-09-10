@@ -24,6 +24,7 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
     shadowMapping(false),
+    initialized(false),
     exposure(1.0f),
     hdr(false), 
     gammaCorrection(false), 
@@ -815,8 +816,6 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4 &vi
 
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
-    //std::cout << "Calclate LightSpaceMatrix with nearPlane: " << nearPlane << " and farPlane: " << farPlane << std::endl;
-
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
     const auto proj = glm::perspective(
@@ -825,24 +824,16 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
             nearPlane,
             farPlane);
     std::vector<glm::vec4> splitFrustumW = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
-    //const auto splitFrustumW = getFrustumCornersWorldSpace(camera->getViewMatrix(), nearPlane, farPlane);
 
     //calculating lightView-Matrix
-    glm::vec3 center = glm::vec3(0,0,0);
-
-    for(const auto& v : splitFrustumW) {
-        center += glm::vec3(v);
-    }
-    center /= splitFrustumW.size();
-
-    const auto lightView = glm::lookAt(center + glm::normalize(shadowLightPos), center, glm::vec3(0.0,1.0,0.0));
+    lightViewMatrix = glm::lookAt(glm::normalize(shadowLightPos), glm::vec3(0.0,0.0,0.0), glm::vec3(0.0,1.0,0.0));
 
     //calculating lightProjection-Matrix
     auto min = glm::vec3(std::numeric_limits<float>::max());
     auto max = glm::vec3(std::numeric_limits<float>::lowest());
 
     for(const auto& v: splitFrustumW) {
-        const auto trf = lightView * v;
+        const auto trf = lightViewMatrix * v;
         min.x = std::min(min.x, trf.x);
         max.x = std::max(max.x, trf.x);
         min.y = std::min(min.y, trf.y);
@@ -862,18 +853,13 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     const glm::mat4 lightProj = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
 
     // create boundingbox of objects contained in the lights-shadow-frustum
-    //const auto splitFrustumSceneDependent = createSceneDependentBB(scenes, splitFrustumLightViewSpace, lightView, lightProj);
+    const auto splitFrustumSceneDependent = createSceneDependentBB(splitFrustumLightViewSpace);
     // recreate the lights-projection-matrix with the new bounds
-    //const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
-    //                                     splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
-    //                                     splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
+    const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
+                                         splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
+                                         splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
 
-    /*std::cout << "splitFrustumSceneIndependent: " << std::endl;
-    splitFrustumLightViewSpace->print();
-    std::cout << "splitFrustumSceneDependent: " << std::endl;
-    splitFrustumSceneDependent->print();*/
-
-    return lightProj * lightView;
+    return lightProjNew * lightViewMatrix;
 }
 
 
@@ -922,39 +908,28 @@ void Renderer::calculateCascadeLevels() {
 }
 
 /**
- * @param scenes scenes to create the boundingbox from
  * @param splitFrustumLightViewSpace sourcefrustum in light-view-space as bounds for the created boundingbox
- * @param lightView light-view-matrix
- * @param lightProj light-projection-matrix
  * @return boundingbox in view-space containing all objects in the scenes that are inside the splitfrustum, cropped by the splitfrustum
  */
-BoundingBox::Ptr Renderer::createSceneDependentBB(  const std::vector<Scene::Ptr>& scenes,
-                                                    const BoundingBox::Ptr& splitFrustumLightViewSpace,
-                                                    const glm::mat4& lightView,
-                                                    const glm::mat4& lightProj
-) {
+BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitFrustumLightViewSpace) {
+    if(!initialized) {
+        calculateShadowCastersAABB(scenes);
+        initialized = true;
+    }
+
     BoundingBox::Ptr resultBB = nullptr;
 
     // transform splitfrustum to light-clip-space
     //const auto splitFrustumLightClipSpace = BoundingBox::transform(splitFrustumLightViewSpace, lightProj);
 
-    for(const auto& scene: scenes) {
-        for(const auto& group: scene->getGroups()) {
-            if(!group->isShadowCaster()) continue;
-            for(const auto& poly: group->getPolytopes()) {
-                // transform object-boundingboxes to light-clip-space
-                const auto modelMatrixWorldSpace = scene->getModelMatrix() * group->getModelMatrix() * poly->getModelMatrix();
-                auto lcsbb = BoundingBox::transform(poly->getBoundingBox(), lightView * modelMatrixWorldSpace);
-
-                // check whether the object is inside the splitfrustum
-                if(BoundingBox::intersect(splitFrustumLightViewSpace, lcsbb)) {
-                    if(resultBB == nullptr) {
-                        resultBB = lcsbb;
-                    } else {
-                        // if so add the bb to a resulting bb
-                        resultBB = BoundingBox::merge(resultBB, lcsbb);
-                    }
-                }
+    for(const auto& bb: shadowCastersAABB) {
+        // check whether the object is inside the splitfrustum
+        if(BoundingBox::intersect(splitFrustumLightViewSpace, bb)) {
+            if(resultBB == nullptr) {
+                resultBB = bb;
+            } else {
+                // if so add the bb to a resulting bb
+                resultBB = BoundingBox::merge(resultBB, bb);
             }
         }
     }
@@ -970,6 +945,52 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(  const std::vector<Scene::Ptr
     // transform the bounding box back to view-space and return it
     return resultBB;
 }
+
+void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
+
+    for(const auto& scene: scenes)
+    {
+        for(const auto& group: scene->getGroups())
+        {
+            if(!group->isShadowCaster()) continue;
+            for(const auto& poly: group->getPolytopes())
+            {
+
+                // transform objects to light-clip-space and create boundingbox
+                const auto modelView = lightViewMatrix * scene->getModelMatrix() * group->getModelMatrix() * poly->getModelMatrix();
+
+                //calculating light-view-axis-aligned-bounding-box
+                auto min = glm::vec3(std::numeric_limits<float>::max());
+                auto max = glm::vec3(std::numeric_limits<float>::lowest());
+
+                for(const auto& v: poly->getVertices()) {
+                    const auto trf = modelView * glm::vec4(v.x, v.y, v.z, 1.0f);
+                    min.x = std::min(min.x, trf.x);
+                    max.x = std::max(max.x, trf.x);
+                    min.y = std::min(min.y, trf.y);
+                    max.y = std::max(max.y, trf.y);
+                    min.z = std::min(min.z, trf.z);
+                    max.z = std::max(max.z, trf.z);
+                }
+
+                constexpr float zMult = 30.0f;
+                if(min.z < 0) min.z *= zMult;
+                else min.z /= zMult;
+                if(max.z < 0) max.z /= zMult;
+                else max.z *= zMult;
+
+                const auto lcsbb = BoundingBox::New(min,max);
+
+                shadowCastersAABB.emplace_back(lcsbb);
+            }
+        }
+    }
+
+    for(const auto& scene: scenes) {
+        calculateShadowCastersAABB(scene->getScenes());
+    }
+}
+
 
 
 void Renderer::takeSnapshot() {
