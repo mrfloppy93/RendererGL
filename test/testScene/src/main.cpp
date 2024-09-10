@@ -73,56 +73,42 @@ int main() {
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
     camera->zoom(-90);
-    camera->rotate(3.5, 5.0);
+    camera->rotate(0.0, 5.0);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
     // Scene
-    const Model::Ptr dog = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
-    //Texture::Ptr dogTexture = Texture::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.mtl");
-    const Polytope::Ptr dogPoly = dog->getPolytopes()[0];
-    //dogPoly->addTexture(dogTexture);
-    dogPoly->setFaceCulling(Polytope::FaceCulling::BACK);
-    dogPoly->rotate(-90, glm::vec3(1,0,0));
-    dogPoly->scale(glm::vec3(.2));
-
-    const Model::Ptr dog2 = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
-    const Polytope::Ptr dog2Poly = dog2->getPolytopes()[0];
-    //dogPoly->addTexture(dogTexture);
-    dog2Poly->setFaceCulling(Polytope::FaceCulling::BACK);
-    dog2Poly->translate(glm::vec3(glm::vec3(5,0,10)));
-    dog2Poly->rotate(-30, glm::vec3(0,1,0));
-    dog2Poly->rotate(-90, glm::vec3(1,0,0));
-    dog2Poly->scale(glm::vec3(.3));
-
-    Group::Ptr dogBB = BBVisuals::New(dog2Poly);
-
-    Cube::Ptr cube = Cube::New();
-    cube->translate(glm::vec3(-10,5,-10));
-    cube->scale(glm::vec3(10));
-    Group::Ptr cubeGroup = Group::New();
-    cubeGroup->add(cube);
-    cubeGroup->setShowWire(true);
-
+    // Terrain
     const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
-    groundPoly->scale(glm::vec3(5));
+    groundPoly->scale(glm::vec3(50));
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
     Group::Ptr terrain = Group::New();
     terrain->setShadowCaster(false);
     terrain->add(groundPoly);
 
-    Group::Ptr group = Group::New();
-    group->add(dogPoly);
-    //group->add(groundPoly);
-    group->add(dog2Poly);
-    //group->add(cube);
+    // Loop for creating lots of dogs to increase load
+    const int max_rows = 2;
+    const int max_cols = 5;
+    std::vector<Polytope::Ptr> objects;
+    Group::Ptr objectGroup = Group::New();
+    for(int row = 0; row < max_rows; row++) {
+        for(int col = 0; col < max_cols; col++) {
+            const auto obj = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
+            objects.emplace_back(obj->getPolytopes()[0]);
+            int index = col + row * max_cols;
+            objects[index]->setFaceCulling(Polytope::FaceCulling::BACK);
+            objects[index]->scale(glm::vec3(.2));
+            objects[index]->rotate(-90, glm::vec3(1,0,0));
+            objects[index]->translate(glm::vec3(row * 25, col * 50, 0));
+
+            objectGroup->add(objects[index]);
+        }
+    }
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(terrain);
-    scene->addGroup(dogBB);
-    scene->addGroup(group);
-    scene->addGroup(cubeGroup);
+    scene->addGroup(objectGroup);
 
 
     renderer->addScene(scene);
@@ -298,11 +284,11 @@ int main() {
                 ImGui::Separator();
 
                 if (ImGui::Button("Reset camera")) {
-                    camera->setTheta(2.5/*M_PI_2*/);
-                    camera->setPhi(5.5/*2 * M_PI*/);
-                    camera->setRadius(60.0f);
-                    camera->setCenter(glm::vec3(0, 0, 0));
-                    camera->setUp(glm::vec3(0, 1, 0));
+                    camera->setTheta(0.0/*M_PI_2*/);
+                    camera->setPhi(5.0/*2 * M_PI*/);
+                    //camera->zoom(-90.0);
+                    //camera->setCenter(glm::vec3(0, 0, 0));
+                    //camera->setUp(glm::vec3(0, 1, 0));
                     /*sensitivity = 1.5f;
                     panSensitivity = 1.0f;
                     zoomSensitivity = 1.0f;
