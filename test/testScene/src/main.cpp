@@ -88,8 +88,8 @@ int main() {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = 2;
-    const int max_cols = 5;
+    const int max_rows = 4;
+    const int max_cols = 4;
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {
@@ -98,13 +98,15 @@ int main() {
             objects.emplace_back(obj->getPolytopes()[0]);
             int index = col + row * max_cols;
             objects[index]->setFaceCulling(Polytope::FaceCulling::BACK);
-            objects[index]->scale(glm::vec3(.2));
-            objects[index]->rotate(-90, glm::vec3(1,0,0));
-            objects[index]->translate(glm::vec3(row * 25, col * 50, 0));
+            //objects[index]->rotate(-90.0, glm::vec3(1.0,0.0,0.0));
+            objects[index]->scale(glm::vec3(.4));
+            float translateX = row%2==0 ? -row * 20 : (row-1) * 20;
+            objects[index]->translate(glm::vec3(translateX, -col * 50, 0));
 
             objectGroup->add(objects[index]);
         }
     }
+    objectGroup->rotate(-90.0, glm::vec3(1.0,0.0,0.0));
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(terrain);
