@@ -853,13 +853,13 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
     const glm::mat4 lightProj = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
 
     // create boundingbox of objects contained in the lights-shadow-frustum
-    const auto splitFrustumSceneDependent = createSceneDependentBB(splitFrustumLightViewSpace);
+    /*const auto splitFrustumSceneDependent = createSceneDependentBB(splitFrustumLightViewSpace);
     // recreate the lights-projection-matrix with the new bounds
     const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
                                          splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
-                                         splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
+                                         splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);*/
 
-    return lightProjNew * lightViewMatrix;
+    return lightProj * lightViewMatrix;
 }
 
 

@@ -88,8 +88,8 @@ int main() {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = 2;
-    const int max_cols = 5;
+    const int max_rows = 10;
+    const int max_cols = 10;
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {
