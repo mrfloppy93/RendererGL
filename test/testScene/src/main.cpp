@@ -5,6 +5,11 @@
 #include <vector>
 #include <chrono>
 #include <fstream>
+#include <iostream>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+#include <numeric>
 
 #include <engine/renderer/Renderer.h>
 #include <engine/renderer/TrackballCamera.h>
@@ -30,6 +35,55 @@ void renderImGui(ImGuiIO& io);
 GLFWwindow* window;
 
 Renderer::Ptr renderer;
+
+void logAverageFrameTime(const std::string& inputLogFile) {
+    const std::string outputLogFile = "average_frame_time_log.txt";
+    // Read frame times from the input logfile
+    std::ifstream logFile(inputLogFile);
+    if (!logFile.is_open()) {
+        std::cerr << "Failed to open input log file." << std::endl;
+        return;
+    }
+
+    std::vector<double> frameTimes;
+    double frameTime;
+    while (logFile >> frameTime) {
+        frameTimes.push_back(frameTime);
+    }
+    logFile.close();
+
+    if (frameTimes.empty()) {
+        std::cerr << "No frame times found in the log file." << std::endl;
+        return;
+    }
+
+    // Calculate the average frame time
+    double sum = std::accumulate(frameTimes.begin(), frameTimes.end(), 0.0);
+    double averageFrameTime = sum / frameTimes.size();
+    int dataPoints = frameTimes.size();
+
+    // Get the current date and time
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+
+    // Format the date and time into a string
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    std::string dateTimeStr = oss.str();
+
+    // Append the average frame time, number of data points, and date/time to the output logfile
+    std::ofstream outputLog(outputLogFile, std::ios_base::app);
+    if (!outputLog.is_open()) {
+        std::cerr << "Failed to open output log file." << std::endl;
+        return;
+    }
+
+    outputLog << "Average Frame Time: " << averageFrameTime << " ms, "
+              << "Data Points: " << dataPoints << ", "
+              << "Date/Time: " << dateTimeStr << std::endl;
+
+    outputLog.close();
+}
 
 int main() {
 
@@ -113,7 +167,8 @@ int main() {
     renderer->addScene(scene);
 
     // Performance Logging
-    std::ofstream logFile("render_log.txt");
+    const std::string logFileString = "render_log.txt";
+    std::ofstream logFile(logFileString);
     if (!logFile.is_open()) {
         std::cerr << "Failed to open log file." << std::endl;
     }
@@ -151,21 +206,15 @@ int main() {
         std::chrono::duration<double, std::milli> frameDuration = frameEnd - frameStart;
         double frameTimeMs = frameDuration.count();
 
-        // Calculate FPS (Frames per second)
-        double fps = 1000.0 / frameTimeMs;
+        logFile << frameTimeMs<< std::endl;
+        std::cout << "Frame Time: " << frameTimeMs << " ms" << std::endl;
 
-        // Log every second
-        auto currentTime = clock::now();
-        std::chrono::duration<double> elapsedTime = currentTime - startTime;
-        if (elapsedTime.count() >= 1.0) {
-            logFile << "FPS: " << fps << ", Frame Time: " << frameTimeMs << " ms" << std::endl;
-            std::cout << "FPS: " << fps << ", Frame Time: " << frameTimeMs << " ms" << std::endl;
-            startTime = currentTime;  // Reset the start time for the next second
-        }
     }
-        // Destroy window
-        glfwTerminate();
-        logFile.close();
+    // Destroy window
+    glfwTerminate();
+    logFile.close();
 
+    logAverageFrameTime(logFileString);
         return 0;
 }
+

@@ -1,6 +1,9 @@
 #include "Renderer.h"
 
 #include <cmath>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #include "TrackballCamera.h"
 #include "engine/group/BBVisuals.h"
@@ -994,9 +997,18 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
 
 
 void Renderer::takeSnapshot() {
+    // Get the current date and time
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+
+    // Format the date and time into a string
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S");
+    std::string dateTimeStr = oss.str();
     for(int i = 0; i < num_cascades; ++i) {
+
         // Save the texture to an image file
-        std::string filename = "depth_map_" + std::to_string(i) + ".png";
+        std::string filename = "depth_map_" + std::to_string(i) + "_" + dateTimeStr + ".png";
         if (depthMap3D->saveTextureArrayLayerToFile(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, i, filename.c_str())) {
             std::cout << "Image saved successfully!" << std::endl;
         } else {
