@@ -126,7 +126,7 @@ int main() {
     // Camera
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
-    camera->zoom(-90);
+    camera->zoom(-180.0);
     camera->rotate(0.0, 1.0);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
@@ -143,7 +143,7 @@ int main() {
 
     // Loop for creating lots of dogs to increase load
     const int max_rows = 1; //397700 795396
-    const int max_cols = 2;
+    const int max_cols = 10;
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {
@@ -157,7 +157,8 @@ int main() {
             float translateX = 0;
             float translateY = 0;
             if(row != 0) translateX = row%2==0 ? -row * 30 : (row+1) * 30;
-            objects[index]->translate(glm::vec3(translateX, -col * 60, 0));
+            translateY = 180 - col * 100;
+            objects[index]->translate(glm::vec3(translateX, translateY, 0));
 
             objectGroup->add(objects[index]);
         }

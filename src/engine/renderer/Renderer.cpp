@@ -481,9 +481,9 @@ void Renderer::renderScenesToDepthMap(std::vector<Scene::Ptr>& scenes) {
 
                         shaderProgramDepthMap->uniformMat4("model", model);
 
-                        glCullFace(GL_FRONT);
-                        polytope->draw(group->getPrimitive(), group->isShowWire());
                         glCullFace(GL_BACK);
+                        polytope->draw(group->getPrimitive(), group->isShowWire());
+                        glCullFace(GL_FRONT);
                     }
                 }
 
@@ -899,11 +899,12 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
  */
 void Renderer::calculateCascadeLevels() {
 
-    float lambda = 0.5; // Lambda should be between 0 and 1
+    float lambda = 0.9; // Lambda should be between 0 and 1
+    int num_cascades = 3;
 
-    for(int i = 1; i < 3; ++i) {
-        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
-        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+    for(int i = 1; i < num_cascades; ++i) {
+        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);
+        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/static_cast<float>(num_cascades));
         float splitPos = lambda * splitPosUni + (1.0 - lambda) * splitPosLog;
         shadowCascadeLevels.push_back(splitPos);
     }
