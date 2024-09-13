@@ -47,8 +47,9 @@ void logAverageFrameTime(const std::string& inputLogFile) {
 
     std::vector<double> frameTimes;
     double frameTime;
-    while (logFile >> frameTime) {
-        frameTimes.push_back(frameTime);
+    GLuint primitivesGenerated;
+    while (logFile >> frameTime >> primitivesGenerated) {
+        frameTimes.push_back(frameTime);;
     }
     logFile.close();
 
@@ -60,6 +61,8 @@ void logAverageFrameTime(const std::string& inputLogFile) {
     // Calculate the average frame time
     double sum = std::accumulate(frameTimes.begin(), frameTimes.end(), 0.0);
     double averageFrameTime = sum / frameTimes.size();
+    //double sumPrimitivesGenerated = std::accumulate(primitivesGeneratedList.begin(), primitivesGeneratedList.end(), 0.0);
+    //double averagePrimitivesGenerated = sumPrimitivesGenerated / primitivesGeneratedList.size();
     int dataPoints = frameTimes.size();
 
     // Get the current date and time
@@ -79,6 +82,7 @@ void logAverageFrameTime(const std::string& inputLogFile) {
     }
 
     outputLog << "Average Frame Time: " << averageFrameTime << " ms, "
+              << "Primitives Generated: " << primitivesGenerated << ", "
               << "Data Points: " << dataPoints << ", "
               << "Date/Time: " << dateTimeStr << std::endl;
 
@@ -138,8 +142,8 @@ int main() {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = 1;
-    const int max_cols = 5;
+    const int max_rows = 1; //397700 795396
+    const int max_cols = 2;
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {
@@ -185,6 +189,11 @@ int main() {
         // Update scene
         //camera->rotate(.01, .0);
 
+        GLuint query;
+        glGenQueries(1, &query);
+        glBeginQuery(GL_PRIMITIVES_GENERATED, query);
+
+        // Render your scene here
         // Draw
         glFinish();
         auto frameStart = clock::now();
@@ -193,12 +202,23 @@ int main() {
         glFinish();
         auto frameEnd = clock::now();
 
+        glEndQuery(GL_PRIMITIVES_GENERATED);
+
+        GLuint primitivesGenerated;
+        glGetQueryObjectuiv(query, GL_QUERY_RESULT, &primitivesGenerated);
+
+
+        glDeleteQueries(1, &query);
+
+
+
         // Update window
         glfwSwapBuffers(window);
         glfwPollEvents();
 
         if(!snap) {
             renderer->takeSnapshot();
+            std::cout << "Number of primitives generated: " << primitivesGenerated << std::endl;
             snap = !snap;
         }
 
@@ -206,7 +226,7 @@ int main() {
         std::chrono::duration<double, std::milli> frameDuration = frameEnd - frameStart;
         double frameTimeMs = frameDuration.count();
 
-        logFile << frameTimeMs<< std::endl;
+        logFile << frameTimeMs << " " << primitivesGenerated << std::endl;
         std::cout << "Frame Time: " << frameTimeMs << " ms" << std::endl;
 
     }
