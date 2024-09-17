@@ -46,10 +46,19 @@ void logAverageFrameTime(const std::string& inputLogFile) {
     }
 
     std::vector<double> frameTimes;
+    std::vector<double> drawTimes;
     double frameTime;
+    double drawTime;
     GLuint primitivesGenerated;
-    while (logFile >> frameTime >> primitivesGenerated) {
-        frameTimes.push_back(frameTime);;
+
+    // Skip the first two lines of the log file
+    for(int i = 0; i < 2; i++) {
+        logFile >> frameTime >> drawTime >> primitivesGenerated;
+    }
+
+    while (logFile >> frameTime >> drawTime >> primitivesGenerated) {
+        frameTimes.push_back(frameTime);
+        drawTimes.push_back(drawTime);
     }
     logFile.close();
 
@@ -58,9 +67,17 @@ void logAverageFrameTime(const std::string& inputLogFile) {
         return;
     }
 
+    if (drawTimes.empty()) {
+        std::cerr << "No draw times found in the log file." << std::endl;
+        return;
+    }
+
     // Calculate the average frame time
     double sum = std::accumulate(frameTimes.begin(), frameTimes.end(), 0.0);
     double averageFrameTime = sum / frameTimes.size();
+
+    double sumDraw = std::accumulate(drawTimes.begin(), drawTimes.end(), 0.0);
+    double averageDrawTime = sumDraw / drawTimes.size();
     //double sumPrimitivesGenerated = std::accumulate(primitivesGeneratedList.begin(), primitivesGeneratedList.end(), 0.0);
     //double averagePrimitivesGenerated = sumPrimitivesGenerated / primitivesGeneratedList.size();
     int dataPoints = frameTimes.size();
@@ -82,6 +99,7 @@ void logAverageFrameTime(const std::string& inputLogFile) {
     }
 
     outputLog << "Average Frame Time: " << averageFrameTime << " ms, "
+              << "Average Draw Time: " << averageDrawTime << " ms, "
               << "Primitives Generated: " << primitivesGenerated << ", "
               << "Data Points: " << dataPoints << ", "
               << "Date/Time: " << dateTimeStr << std::endl;
@@ -196,9 +214,11 @@ int main() {
         // Render your scene here
         // Draw
         glFinish();
-        auto frameStart = clock::now();
         renderer->clear();
+        auto frameStart = clock::now();
+        auto drawStart = clock::now();
         renderer->draw();
+        auto drawEnd = clock::now();
         glFinish();
         auto frameEnd = clock::now();
 
@@ -225,9 +245,12 @@ int main() {
         // Calculate the time taken to render this frame in milliseconds
         std::chrono::duration<double, std::milli> frameDuration = frameEnd - frameStart;
         double frameTimeMs = frameDuration.count();
+        // Calculate the time taken to run the draw funtions this frame in milliseconds
+        std::chrono::duration<double, std::milli> drawDuration = drawEnd - drawStart;
+        double drawTimeMs = drawDuration.count();
 
-        logFile << frameTimeMs << " " << primitivesGenerated << std::endl;
-        std::cout << "Frame Time: " << frameTimeMs << " ms" << std::endl;
+        logFile << frameTimeMs << " " << drawTimeMs << " " << primitivesGenerated << std::endl;
+        //std::cout << "Frame Time: " << frameTimeMs << " ms" << std::endl;
 
     }
     // Destroy window
