@@ -899,11 +899,12 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
  */
 void Renderer::calculateCascadeLevels() {
 
-    float lambda = 0.5; // Lambda should be between 0 and 1
+    float lambda = 0.9; // Lambda should be between 0 and 1
+    int num_cascades = 3;
 
-    for(int i = 1; i < 3; ++i) {
-        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
-        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+    for(int i = 1; i < num_cascades; ++i) {
+        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);
+        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/static_cast<float>(num_cascades));
         float splitPos = lambda * splitPosUni + (1.0 - lambda) * splitPosLog;
         shadowCascadeLevels.push_back(splitPos);
     }
