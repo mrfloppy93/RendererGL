@@ -481,9 +481,9 @@ void Renderer::renderScenesToDepthMap(std::vector<Scene::Ptr>& scenes) {
 
                         shaderProgramDepthMap->uniformMat4("model", model);
 
-                        glCullFace(GL_FRONT);
-                        polytope->draw(group->getPrimitive(), group->isShowWire());
                         glCullFace(GL_BACK);
+                        polytope->draw(group->getPrimitive(), group->isShowWire());
+                        glCullFace(GL_FRONT);
                     }
                 }
 
