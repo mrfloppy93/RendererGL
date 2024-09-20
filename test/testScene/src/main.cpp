@@ -214,8 +214,8 @@ int main() {
 
         // Render your scene here
         // Draw
-        glFinish();
         renderer->clear();
+        glFinish();
         auto frameStart = clock::now();
         auto drawStart = clock::now();
         renderer->draw();
