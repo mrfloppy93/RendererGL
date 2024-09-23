@@ -156,7 +156,7 @@ int main() {
 
     // Loop for creating lots of dogs to increase load
     const int max_rows = 1;
-    const int max_cols = 10;
+    const int max_cols = 1;
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {

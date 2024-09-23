@@ -396,6 +396,7 @@ void Renderer::shadowMappingUniforms() {
     //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
     shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
+    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
 }
 
 void Renderer::setFaceCulling(const Polytope::Ptr& polytope) {
@@ -940,7 +941,7 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
                     max.z = std::max(max.z, trf.z);
                 }
 
-                constexpr float zMult = 10.0f;
+                constexpr float zMult = 30.0f;
                 if(min.z < 0) min.z *= zMult;
                 else min.z /= zMult;
                 if(max.z < 0) max.z /= zMult;
