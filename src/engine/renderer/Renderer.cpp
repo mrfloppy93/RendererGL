@@ -396,7 +396,6 @@ void Renderer::shadowMappingUniforms() {
     //shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
     shaderProgramLighting->uniformFloat("farPlane", cameraFarPlane);
-    shaderProgramLighting->uniformInt("cascadeCount", shadowCascadeLevels.size());
 }
 
 void Renderer::setFaceCulling(const Polytope::Ptr& polytope) {
