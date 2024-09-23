@@ -1,11 +1,14 @@
 #include "Renderer.h"
 
 #include <cmath>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #include "TrackballCamera.h"
 #include "engine/group/BBVisuals.h"
 
-#define NEAR_PLANE 0.1
+#define NEAR_PLANE 10.0
 #define FAR_PLANE 500
 
 #define SHADOW_MAP_WIDTH 2048
@@ -75,10 +78,6 @@ void Renderer::initShaders() {
     Shader geometryDepthMapShader = Shader::fromFile("glsl/SimpleDepth.geom", Shader::ShaderType::Geometry);
     Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
     shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader, geometryDepthMapShader);
-
-    /*Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-    Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-    shaderProgramDepthMapCSM = ShaderProgram::New(vertexDepthMapShaderCSM, fragmentDepthMapShaderCSM);*/
 
     // HDR shader program
     Shader vertexHDRShader = Shader::fromFile("glsl/HDR.vert", Shader::ShaderType::Vertex);
@@ -782,38 +781,6 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
     return frustumCorners;
 }
 
-std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4 &view, float nearPlane, float farPlane) const {
-    const auto inv = glm::inverse(view);
-
-    float aspectRatio = static_cast<float>(getViewportWidth())/static_cast<float>(getViewportHeight());
-    float fov = 45.0f;
-    float tanHalfHFOV = glm::tan(glm::radians(fov/2.0f));
-    float tanHalfVFOV = glm::tan(glm::radians((fov*aspectRatio)/2.0f));
-
-    std::vector<glm::vec4> frustumCorners;
-
-    float xn = nearPlane * tanHalfHFOV;
-    float xf = farPlane * tanHalfHFOV;
-    float yn = nearPlane * tanHalfVFOV;
-    float yf = farPlane * tanHalfVFOV;
-
-    frustumCorners.emplace_back(xn, yn, nearPlane, 1.0f);
-    frustumCorners.emplace_back(-xn, yn, nearPlane, 1.0f);
-    frustumCorners.emplace_back(xn, -yn, nearPlane, 1.0f);
-    frustumCorners.emplace_back(-xn, -yn, nearPlane, 1.0f);
-
-    frustumCorners.emplace_back(xf, yf, farPlane, 1.0f);
-    frustumCorners.emplace_back(-xf, yf, farPlane, 1.0f);
-    frustumCorners.emplace_back(xf, -yf, farPlane, 1.0f);
-    frustumCorners.emplace_back(-xf, -yf, farPlane, 1.0f);
-
-    for(auto& v : frustumCorners) {
-        v = inv * v;
-    }
-
-    return frustumCorners;
-}
-
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     // Calculate field of view from camera-perspective-matrix
@@ -842,7 +809,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         max.z = std::max(max.z, trf.z);
     }
 
-    constexpr float zMult = 10.0f;
+    constexpr float zMult = 30.0f;
     if(min.z < 0) min.z *= zMult;
     else min.z /= zMult;
     if(max.z < 0) max.z /= zMult;
@@ -896,11 +863,12 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
  */
 void Renderer::calculateCascadeLevels() {
 
-    float lambda = 0.3; // Lambda should be between 0 and 1
+    float lambda = 0.9; // Lambda should be between 0 and 1
+    int num_cascades = 3;
 
-    for(int i = 1; i < 3; ++i) {
-        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/3.0;
-        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/3.0);
+    for(int i = 1; i < num_cascades; ++i) {
+        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);
+        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/static_cast<float>(num_cascades));
         float splitPos = lambda * splitPosUni + (1.0 - lambda) * splitPosLog;
         shadowCascadeLevels.push_back(splitPos);
     }
@@ -939,7 +907,7 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitF
         resultBB = splitFrustumLightViewSpace;
     } else {
         // crop the resulting bb with the splitfrustum
-        //resultBB = BoundingBox::crop(resultBB, splitFrustumLightViewSpace);
+        resultBB = BoundingBox::crop(resultBB, splitFrustumLightViewSpace);
     }
 
     // transform the bounding box back to view-space and return it
@@ -973,7 +941,7 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
                     max.z = std::max(max.z, trf.z);
                 }
 
-                constexpr float zMult = 30.0f;
+                constexpr float zMult = 10.0f;
                 if(min.z < 0) min.z *= zMult;
                 else min.z /= zMult;
                 if(max.z < 0) max.z /= zMult;
@@ -994,9 +962,18 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
 
 
 void Renderer::takeSnapshot() {
+    // Get the current date and time
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+
+    // Format the date and time into a string
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S");
+    std::string dateTimeStr = oss.str();
     for(int i = 0; i < num_cascades; ++i) {
+
         // Save the texture to an image file
-        std::string filename = "depth_map_" + std::to_string(i) + ".png";
+        std::string filename = "depth_map_" + std::to_string(i) + "_" + dateTimeStr + ".png";
         if (depthMap3D->saveTextureArrayLayerToFile(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, i, filename.c_str())) {
             std::cout << "Image saved successfully!" << std::endl;
         } else {

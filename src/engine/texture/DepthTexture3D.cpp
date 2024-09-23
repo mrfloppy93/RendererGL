@@ -3,6 +3,7 @@
 //
 #include "DepthTexture3D.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <algorithm>
 #include "vendor/stb_image_write.h"
 
 DepthTexture3D::DepthTexture3D(unsigned int _width, unsigned int _height, const std::vector<float> &_shadowCascadeLevels)
@@ -82,11 +83,22 @@ bool DepthTexture3D::saveTextureArrayLayerToFile(int width, int height, int laye
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteFramebuffers(1, &fbo);
 
+    // Find the minimum and maximum depth values
+    auto minMax = std::minmax_element(depthData.begin(), depthData.end());
+    float minDepth = *minMax.first;
+    float maxDepth = *minMax.second;
+
+    // Avoid division by zero in case all depth values are the same
+    if (maxDepth - minDepth < 1e-6f) {
+        maxDepth = minDepth + 1.0f;
+    }
+
     // Convert depth values to 8-bit grayscale
     std::vector<unsigned char> imageData(width * height);
     for (int i = 0; i < width * height; ++i) {
-        float depthValue = depthData[i];
-        imageData[i] = static_cast<unsigned char>(depthValue * 255.0f);
+        //float depthValue = depthData[i];
+        float normalizedDepth = (depthData[i] - minDepth) / (maxDepth - minDepth);
+        imageData[i] = static_cast<unsigned char>(normalizedDepth * 255.0f);
     }
 
     // Write the image to a file using stb_image_write

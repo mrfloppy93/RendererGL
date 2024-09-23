@@ -45,7 +45,7 @@ void Group::updateBoundingBox() {
 void Group::add(const Polytope::Ptr &polytope) {
     polytopes.push_back(polytope);
 
-    updateBoundingBox();
+    //updateBoundingBox();
 }
 
 

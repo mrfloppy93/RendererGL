@@ -29,7 +29,6 @@
 #include "TrackballCamera.h"
 #include "engine/texture/DepthTexture3D.h"
 
-
 class Renderer {
     GENERATE_PTR(Renderer)
 
