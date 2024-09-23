@@ -8,7 +8,7 @@
 #include "TrackballCamera.h"
 #include "engine/group/BBVisuals.h"
 
-#define NEAR_PLANE 0.1
+#define NEAR_PLANE 10.0
 #define FAR_PLANE 500
 
 #define SHADOW_MAP_WIDTH 2048
@@ -78,10 +78,6 @@ void Renderer::initShaders() {
     Shader geometryDepthMapShader = Shader::fromFile("glsl/SimpleDepth.geom", Shader::ShaderType::Geometry);
     Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
     shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader, geometryDepthMapShader);
-
-    /*Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-    Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-    shaderProgramDepthMapCSM = ShaderProgram::New(vertexDepthMapShaderCSM, fragmentDepthMapShaderCSM);*/
 
     // HDR shader program
     Shader vertexHDRShader = Shader::fromFile("glsl/HDR.vert", Shader::ShaderType::Vertex);
@@ -785,38 +781,6 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
     return frustumCorners;
 }
 
-std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4 &view, float nearPlane, float farPlane) const {
-    const auto inv = glm::inverse(view);
-
-    float aspectRatio = static_cast<float>(getViewportWidth())/static_cast<float>(getViewportHeight());
-    float fov = 45.0f;
-    float tanHalfHFOV = glm::tan(glm::radians(fov/2.0f));
-    float tanHalfVFOV = glm::tan(glm::radians((fov*aspectRatio)/2.0f));
-
-    std::vector<glm::vec4> frustumCorners;
-
-    float xn = nearPlane * tanHalfHFOV;
-    float xf = farPlane * tanHalfHFOV;
-    float yn = nearPlane * tanHalfVFOV;
-    float yf = farPlane * tanHalfVFOV;
-
-    frustumCorners.emplace_back(xn, yn, nearPlane, 1.0f);
-    frustumCorners.emplace_back(-xn, yn, nearPlane, 1.0f);
-    frustumCorners.emplace_back(xn, -yn, nearPlane, 1.0f);
-    frustumCorners.emplace_back(-xn, -yn, nearPlane, 1.0f);
-
-    frustumCorners.emplace_back(xf, yf, farPlane, 1.0f);
-    frustumCorners.emplace_back(-xf, yf, farPlane, 1.0f);
-    frustumCorners.emplace_back(xf, -yf, farPlane, 1.0f);
-    frustumCorners.emplace_back(-xf, -yf, farPlane, 1.0f);
-
-    for(auto& v : frustumCorners) {
-        v = inv * v;
-    }
-
-    return frustumCorners;
-}
-
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     // Calculate field of view from camera-perspective-matrix
@@ -977,7 +941,7 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
                     max.z = std::max(max.z, trf.z);
                 }
 
-                constexpr float zMult = 30.0f;
+                constexpr float zMult = 10.0f;
                 if(min.z < 0) min.z *= zMult;
                 else min.z /= zMult;
                 if(max.z < 0) max.z /= zMult;

@@ -21,7 +21,7 @@
 #include "engine/shapes/Sphere.h"
 #include "imgui/imgui_internal.h"
 
-#define NEAR_PLANE 0.1
+#define NEAR_PLANE 10.0
 #define FAR_PLANE 500.0
 
 const int WIDTH = 1920;
@@ -127,11 +127,6 @@ int main() {
     // Lighting
     renderer->enableLight();
 
-    // Point lighting
-    /*PointLight light1(glm::vec3(2, 10, 2));
-    light1.setColor(glm::vec3(.8, .5, .2));
-    renderer->addLight(light1);*/
-
     // Directional Lighting
     DirectionalLight light2(glm::vec3(200, 80, 100));//(glm::vec3(-5, 3, 5.5));
     light2.setColor(glm::vec3(1));
@@ -160,7 +155,7 @@ int main() {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = 1; //397700 795396
+    const int max_rows = 1;
     const int max_cols = 10;
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
@@ -197,7 +192,6 @@ int main() {
     }
 
     using clock = std::chrono::high_resolution_clock;
-    auto startTime = clock::now();
     bool snap = false;
 
     // Main loop
@@ -238,7 +232,7 @@ int main() {
         glfwPollEvents();
 
         if(!snap) {
-            renderer->takeSnapshot();
+            //renderer->takeSnapshot();
             std::cout << "Number of primitives generated: " << primitivesGenerated << std::endl;
             snap = !snap;
         }
