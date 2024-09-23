@@ -192,7 +192,7 @@ int main() {
     }
 
     using clock = std::chrono::high_resolution_clock;
-    bool snap = false;
+    bool snap = true;
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -232,7 +232,7 @@ int main() {
         glfwPollEvents();
 
         if(!snap) {
-            //renderer->takeSnapshot();
+            renderer->takeSnapshot();
             std::cout << "Number of primitives generated: " << primitivesGenerated << std::endl;
             snap = !snap;
         }
