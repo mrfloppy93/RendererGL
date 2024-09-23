@@ -8,7 +8,7 @@
 #include "TrackballCamera.h"
 #include "engine/group/BBVisuals.h"
 
-#define NEAR_PLANE 10.0
+#define NEAR_PLANE 0.1
 #define FAR_PLANE 500
 
 #define SHADOW_MAP_WIDTH 2048
@@ -863,8 +863,8 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
  */
 void Renderer::calculateCascadeLevels() {
 
-    float lambda = 0.9; // Lambda should be between 0 and 1
-    int num_cascades = 3;
+    float lambda = 0.6; // Lambda should be between 0 and 1
+    num_cascades = 3;
 
     for(int i = 1; i < num_cascades; ++i) {
         float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);
@@ -872,7 +872,6 @@ void Renderer::calculateCascadeLevels() {
         float splitPos = lambda * splitPosUni + (1.0 - lambda) * splitPosLog;
         shadowCascadeLevels.push_back(splitPos);
     }
-    num_cascades = shadowCascadeLevels.size() + 1;
 }
 
 /**
@@ -887,14 +886,11 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitF
 
     BoundingBox::Ptr resultBB = nullptr;
 
-    // transform splitfrustum to light-clip-space
-    //const auto splitFrustumLightClipSpace = BoundingBox::transform(splitFrustumLightViewSpace, lightProj);
-
     for(const auto& bb: shadowCastersAABB) {
         // check whether the object is inside the splitfrustum
         if(BoundingBox::intersect(splitFrustumLightViewSpace, bb)) {
             if(resultBB == nullptr) {
-                resultBB = bb;
+                resultBB = BoundingBox::New(bb->m_vMin, bb->m_vMax);
             } else {
                 // if so add the bb to a resulting bb
                 resultBB = BoundingBox::merge(resultBB, bb);
@@ -907,7 +903,15 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitF
         resultBB = splitFrustumLightViewSpace;
     } else {
         // crop the resulting bb with the splitfrustum
-        resultBB = BoundingBox::crop(resultBB, splitFrustumLightViewSpace);
+        //resultBB = BoundingBox::crop(resultBB, splitFrustumLightViewSpace);
+        auto min = resultBB->m_vMin;
+        auto max = resultBB->m_vMax;
+        constexpr float zMult = 30.0f;
+        if(min.z < 0) min.z *= zMult;
+        else min.z /= zMult;
+        if(max.z < 0) max.z /= zMult;
+        else max.z *= zMult;
+        resultBB = BoundingBox::New(min,max);
     }
 
     // transform the bounding box back to view-space and return it
@@ -941,12 +945,6 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
                     max.z = std::max(max.z, trf.z);
                 }
 
-                constexpr float zMult = 30.0f;
-                if(min.z < 0) min.z *= zMult;
-                else min.z /= zMult;
-                if(max.z < 0) max.z /= zMult;
-                else max.z *= zMult;
-
                 const auto lcsbb = BoundingBox::New(min,max);
 
                 shadowCastersAABB.emplace_back(lcsbb);
@@ -973,7 +971,7 @@ void Renderer::takeSnapshot() {
     for(int i = 0; i < num_cascades; ++i) {
 
         // Save the texture to an image file
-        std::string filename = "depth_map_" + std::to_string(i) + "_" + dateTimeStr + ".png";
+        std::string filename = dateTimeStr + "_" + "depth_map_" + std::to_string(i) + ".png";
         if (depthMap3D->saveTextureArrayLayerToFile(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, i, filename.c_str())) {
             std::cout << "Image saved successfully!" << std::endl;
         } else {
