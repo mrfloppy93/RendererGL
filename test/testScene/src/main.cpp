@@ -192,15 +192,13 @@ int main() {
     }
 
     using clock = std::chrono::high_resolution_clock;
+    unsigned int samples = 500;
     bool snap = true;
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
 
         renderer->setBackgroundColor(0.f, 0.f, 0.f);
-
-        // Update scene
-        //camera->rotate(.01, .0);
 
         GLuint query;
         glGenQueries(1, &query);
@@ -225,8 +223,6 @@ int main() {
 
         glDeleteQueries(1, &query);
 
-
-
         // Update window
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -246,7 +242,7 @@ int main() {
 
         logFile << frameTimeMs << " " << drawTimeMs << " " << primitivesGenerated << std::endl;
         //std::cout << "Frame Time: " << frameTimeMs << " ms" << std::endl;
-
+        if(--samples == 0) break;
     }
     // Destroy window
     glfwTerminate();
