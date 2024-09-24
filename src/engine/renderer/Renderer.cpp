@@ -781,7 +781,6 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
     return frustumCorners;
 }
 
-
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
@@ -809,7 +808,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         max.z = std::max(max.z, trf.z);
     }
 
-    constexpr float zMult = 30.0f;
+    constexpr float zMult = 10.0f;
     if(min.z < 0) min.z *= zMult;
     else min.z /= zMult;
     if(max.z < 0) max.z /= zMult;
@@ -902,15 +901,18 @@ BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitF
         // if no object is inside the splitfrustum, return the splitfrustum
         resultBB = splitFrustumLightViewSpace;
     } else {
-        // crop the resulting bb with the splitfrustum
-        //resultBB = BoundingBox::crop(resultBB, splitFrustumLightViewSpace);
+        // crop the resulting bb with the splitfrustum, z-values are expanded to splitfrustum
         auto min = resultBB->m_vMin;
         auto max = resultBB->m_vMax;
-        constexpr float zMult = 30.0f;
-        if(min.z < 0) min.z *= zMult;
-        else min.z /= zMult;
-        if(max.z < 0) max.z /= zMult;
-        else max.z *= zMult;
+
+        min.x = std::max(min.x, splitFrustumLightViewSpace->m_vMin.x);
+        min.y = std::max(min.y, splitFrustumLightViewSpace->m_vMin.y);
+        min.z = splitFrustumLightViewSpace->m_vMin.z;
+
+        max.x = std::min(max.x, splitFrustumLightViewSpace->m_vMax.x);
+        max.y = std::min(max.y, splitFrustumLightViewSpace->m_vMax.y);
+        max.z = splitFrustumLightViewSpace->m_vMax.z;
+
         resultBB = BoundingBox::New(min,max);
     }
 
