@@ -21,7 +21,7 @@
 #include "engine/shapes/Sphere.h"
 #include "imgui/imgui_internal.h"
 
-#define NEAR_PLANE 10.0
+#define NEAR_PLANE 0.1
 #define FAR_PLANE 500.0
 
 const int WIDTH = 1920;
@@ -140,7 +140,7 @@ int main() {
     double aspectRatio = static_cast<double>(WIDTH) / HEIGHT;
     TrackballCamera::Ptr camera = TrackballCamera::perspectiveCamera(glm::radians(45.0f), aspectRatio, NEAR_PLANE, FAR_PLANE);
     camera->zoom(-180.0);
-    camera->rotate(0.0, 1.0);
+    camera->rotate(0.0, 1.3);
 
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
@@ -155,23 +155,25 @@ int main() {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = 1;
+    const int max_rows = 5;
     const int max_cols = 1;
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {
         for(int col = 0; col < max_cols; col++) {
-            const auto obj = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/10680_Dog_v2.obj");
+            const auto obj = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/dog.obj");
             objects.emplace_back(obj->getPolytopes()[0]);
             int index = col + row * max_cols;
             objects[index]->setFaceCulling(Polytope::FaceCulling::BACK);
-            objects[index]->rotate(-90.0, glm::vec3(1.0,0.0,0.0));
+            //objects[index]->rotate(180.0, glm::vec3(0.0,1.0,0.0));
             objects[index]->scale(glm::vec3(.4));
             float translateX = 0;
-            float translateY = 0;
-            if(row != 0) translateX = row%2==0 ? -row * 30 : (row+1) * 30;
-            translateY = 180 - col * 100;
-            objects[index]->translate(glm::vec3(translateX, translateY, 0));
+            float translateZ = 0;
+            float multX = (col+1) * 30;
+            if(row != 0) translateX = row%2==0 ? -row * multX : (row+1) * multX;
+            translateX -= 10;
+            translateZ = -250 + col * 100;
+            objects[index]->translate(glm::vec3(translateX, 0, translateZ));
 
             objectGroup->add(objects[index]);
         }
