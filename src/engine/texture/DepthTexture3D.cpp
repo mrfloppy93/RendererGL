@@ -4,7 +4,6 @@
 #include "DepthTexture3D.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <algorithm>
-
 #include "vendor/stb_image_write.h"
 
 DepthTexture3D::DepthTexture3D(unsigned int _width, unsigned int _height, const std::vector<float> &_shadowCascadeLevels)

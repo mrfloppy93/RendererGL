@@ -114,9 +114,9 @@ void BoundingBox::print() {
  */
 bool BoundingBox::contains(const BoundingBox::Ptr& bb) {
     return std::all_of(bb->m_points.begin(), bb->m_points.end(), [&](const auto& p) {
-        return      p.x < m_vMax.x && p.x > m_vMin.x
-                &&  p.y < m_vMax.y && p.y > m_vMin.y
-                &&  p.z < m_vMax.z && p.z > m_vMin.z;
+        return      (p.x < m_vMax.x) && (p.x > m_vMin.x)
+                &&  (p.y < m_vMax.y) && (p.y > m_vMin.y)
+                &&  (p.z < m_vMax.z) && (p.z > m_vMin.z);
     });
 }
 
@@ -128,9 +128,9 @@ bool BoundingBox::contains(const BoundingBox::Ptr& bb) {
  */
 bool BoundingBox::intersect(const BoundingBox::Ptr& bb1, const BoundingBox::Ptr& bb2) {
     return std::any_of(bb2->m_points.begin(), bb2->m_points.end(), [&](const auto& p) {
-        return      p.x < bb1->m_vMax.x && p.x > bb1->m_vMin.x
-                &&  p.y < bb1->m_vMax.y && p.y > bb1->m_vMin.y
-                &&  p.z < bb1->m_vMax.z && p.z > bb1->m_vMin.z;
+        return      (p.x < bb1->m_vMax.x) && (p.x > bb1->m_vMin.x)
+                &&  (p.y < bb1->m_vMax.y) && (p.y > bb1->m_vMin.y)
+                &&  (p.z < bb1->m_vMax.z) && (p.z > bb1->m_vMin.z);
     });
 }
 
