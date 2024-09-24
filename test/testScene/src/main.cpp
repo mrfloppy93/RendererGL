@@ -107,7 +107,12 @@ void logAverageFrameTime(const std::string& inputLogFile) {
     outputLog.close();
 }
 
-int main() {
+int main(int argc, char** argv) {
+
+    if(argc < 3) {
+        std::cout << "Please provide the number of rows and columns for the grid." << std::endl;
+        return -1;
+    }
 
     // Create window
     if (!glfwInit()) {
@@ -155,8 +160,9 @@ int main() {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = 5;
-    const int max_cols = 1;
+    const int max_rows = std::stoi(argv[1]);
+    const int max_cols = std::stoi(argv[2]);
+
     std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {
@@ -168,11 +174,10 @@ int main() {
             //objects[index]->rotate(180.0, glm::vec3(0.0,1.0,0.0));
             objects[index]->scale(glm::vec3(.4));
             float translateX = 0;
-            float translateZ = 0;
+            float translateZ = -250 + col * 100;
             float multX = (col+1) * 30;
             if(row != 0) translateX = row%2==0 ? -row * multX : (row+1) * multX;
             translateX -= 10;
-            translateZ = -250 + col * 100;
             objects[index]->translate(glm::vec3(translateX, 0, translateZ));
 
             objectGroup->add(objects[index]);
