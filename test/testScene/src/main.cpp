@@ -13,7 +13,6 @@
 
 #include <engine/renderer/Renderer.h>
 #include <engine/renderer/TrackballCamera.h>
-#include <engine/shapes/Cube.h>
 
 #include <GLFW/glfw3.h>
 #include "ImguiStyles.h"
@@ -37,7 +36,7 @@ GLFWwindow* window;
 Renderer::Ptr renderer;
 
 void logAverageFrameTime(const std::string& inputLogFile) {
-    const std::string outputLogFile = "average_frame_time_log.txt";
+    const std::string outputLogFile = "average_frame_time_log.csv";
     // Read frame times from the input logfile
     std::ifstream logFile(inputLogFile);
     if (!logFile.is_open()) {
@@ -52,7 +51,7 @@ void logAverageFrameTime(const std::string& inputLogFile) {
     GLuint primitivesGenerated;
 
     // Skip the first two lines of the log file
-    for(int i = 0; i < 2; i++) {
+    for(int i = 0; i < 10; i++) {
         logFile >> frameTime >> drawTime >> primitivesGenerated;
     }
 
@@ -78,18 +77,6 @@ void logAverageFrameTime(const std::string& inputLogFile) {
 
     double sumDraw = std::accumulate(drawTimes.begin(), drawTimes.end(), 0.0);
     double averageDrawTime = sumDraw / drawTimes.size();
-    //double sumPrimitivesGenerated = std::accumulate(primitivesGeneratedList.begin(), primitivesGeneratedList.end(), 0.0);
-    //double averagePrimitivesGenerated = sumPrimitivesGenerated / primitivesGeneratedList.size();
-    int dataPoints = frameTimes.size();
-
-    // Get the current date and time
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
-
-    // Format the date and time into a string
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    std::string dateTimeStr = oss.str();
 
     // Append the average frame time, number of data points, and date/time to the output logfile
     std::ofstream outputLog(outputLogFile, std::ios_base::app);
@@ -97,12 +84,11 @@ void logAverageFrameTime(const std::string& inputLogFile) {
         std::cerr << "Failed to open output log file." << std::endl;
         return;
     }
+    if (outputLog.tellp() == 0) {
+        outputLog << "Average Frame Time (ms), Average Draw Time (ms), Primitives Generated" << std::endl;;
+    }
 
-    outputLog << "Average Frame Time: " << averageFrameTime << " ms, "
-              << "Average Draw Time: " << averageDrawTime << " ms, "
-              << "Primitives Generated: " << primitivesGenerated << ", "
-              << "Data Points: " << dataPoints << ", "
-              << "Date/Time: " << dateTimeStr << std::endl;
+    outputLog << averageFrameTime << ", " << averageDrawTime << ", " << primitivesGenerated << std::endl;
 
     outputLog.close();
 }
@@ -199,7 +185,7 @@ int main(int argc, char** argv) {
     }
 
     using clock = std::chrono::high_resolution_clock;
-    unsigned int samples = 500;
+    unsigned int samples = 510;
     bool snap = true;
 
     // Main loop
