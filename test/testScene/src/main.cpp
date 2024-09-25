@@ -85,7 +85,7 @@ void logAverageFrameTime(const std::string& inputLogFile) {
         return;
     }
     if (outputLog.tellp() == 0) {
-        outputLog << "Average Frame Time (ms), Average Draw Time (ms), Primitives Generated" << std::endl;;
+        outputLog << "Average Frame Time (ms),Average Draw Time (ms),Primitives Generated" << std::endl;;
     }
 
     outputLog << averageFrameTime << ", " << averageDrawTime << ", " << primitivesGenerated << std::endl;
