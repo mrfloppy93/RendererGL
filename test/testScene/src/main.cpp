@@ -160,10 +160,10 @@ int main(int argc, char** argv) {
             //objects[index]->rotate(180.0, glm::vec3(0.0,1.0,0.0));
             objects[index]->scale(glm::vec3(.4));
             float translateX = 0;
-            float translateZ = -250 + col * 100;
-            float multX = (col+1) * 30;
+            float translateZ = -250 + col * 80;
+            float multX = 15 + col * 5;
             if(row != 0) translateX = row%2==0 ? -row * multX : (row+1) * multX;
-            translateX -= 10;
+            translateX -= 15;
             objects[index]->translate(glm::vec3(translateX, 0, translateZ));
 
             objectGroup->add(objects[index]);
