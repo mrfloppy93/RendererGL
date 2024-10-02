@@ -25,7 +25,7 @@ Polytope::Polytope(const Polytope& polytope)
     vertexLength(polytope.vertexLength), indicesLength(polytope.indicesLength), material(polytope.material),
     modelMatrix(polytope.modelMatrix), selected(polytope.selected), faceCulling(polytope.faceCulling),
     emissionStrength(polytope.emissionStrength), tangentAndBitangents(polytope.tangentAndBitangents) {
-    //initBoundingBox();
+    initBoundingBox();
 }
 
 Polytope::Polytope(Polytope&& polytope) noexcept 
@@ -34,7 +34,7 @@ Polytope::Polytope(Polytope&& polytope) noexcept
     material(std::move(polytope.material)), modelMatrix(std::move(polytope.modelMatrix)), selected(polytope.selected),
     faceCulling(polytope.faceCulling), emissionStrength(polytope.emissionStrength),
     tangentAndBitangents(polytope.tangentAndBitangents) {
-    //initBoundingBox();
+    initBoundingBox();
 }
 
 void Polytope::setTangentsAndBitangents(Vec3f& vertex0, Vec3f& vertex1, Vec3f& vertex2) {
@@ -104,7 +104,7 @@ void Polytope::initPolytope(std::vector<Vec3f>& vertices) {
     vertexBuffer = VertexBuffer::New(vertices);
     material = PhongMaterial::New(MATERIAL_DIFFUSE, MATERIAL_SPECULAR, MATERIAL_SHININESS);
     unbind();
-    //initBoundingBox();
+    initBoundingBox();
 }
 
 void Polytope::initPolytope(std::vector<Vec3f>& vertices, std::vector<unsigned int>& indices) {
@@ -113,7 +113,7 @@ void Polytope::initPolytope(std::vector<Vec3f>& vertices, std::vector<unsigned i
     vertexBuffer = VertexBuffer::New(vertices, indices);
     material = PhongMaterial::New(MATERIAL_DIFFUSE, MATERIAL_SPECULAR, MATERIAL_SHININESS);
     unbind();
-    //initBoundingBox();
+    initBoundingBox();
 }
 
 void Polytope::bind() {
