@@ -863,7 +863,7 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
 void Renderer::calculateCascadeLevels() {
 
     float lambda = 0.6; // Lambda should be between 0 and 1
-    num_cascades = 3;
+    num_cascades = 5;
 
     for(int i = 1; i < num_cascades; ++i) {
         float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);

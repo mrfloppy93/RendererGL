@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
 
     // Scene
     // Terrain
-    const Model::Ptr ground = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/platform.obj");
+    const Model::Ptr ground = Model::New("obj/platform.obj");
     const Polytope::Ptr groundPoly = ground->getPolytopes()[0];
     groundPoly->scale(glm::vec3(500));
     groundPoly->setFaceCulling(Polytope::FaceCulling::BACK);
@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
     Group::Ptr objectGroup = Group::New();
     for(int row = 0; row < max_rows; row++) {
         for(int col = 0; col < max_cols; col++) {
-            const auto obj = Model::New("/home/lukas/CLionProjects/RendererGL/models/OBJ/dog.obj");
+            const auto obj = Model::New("obj/dog.obj");
             objects.emplace_back(obj->getPolytopes()[0]);
             int index = col + row * max_cols;
             objects[index]->setFaceCulling(Polytope::FaceCulling::BACK);
