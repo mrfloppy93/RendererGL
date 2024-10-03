@@ -863,7 +863,7 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
 void Renderer::calculateCascadeLevels() {
 
     float lambda = 0.6; // Lambda should be between 0 and 1
-    num_cascades = 3;
+    num_cascades = 5;
 
     for(int i = 1; i < num_cascades; ++i) {
         float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);
@@ -878,8 +878,11 @@ void Renderer::calculateCascadeLevels() {
  * @return boundingbox in view-space containing all objects in the scenes that are inside the splitfrustum, cropped by the splitfrustum
  */
 BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitFrustumLightViewSpace) {
+    if(!initialized) {
+        calculateShadowCastersAABB(scenes);
+        initialized = true;
+    }
 
-    calculateShadowCastersAABB(scenes);
     BoundingBox::Ptr resultBB = nullptr;
 
     for(const auto& bb: shadowCastersAABB) {
@@ -934,8 +937,8 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
                 auto min = glm::vec3(std::numeric_limits<float>::max());
                 auto max = glm::vec3(std::numeric_limits<float>::lowest());
 
-                for(const auto& v: poly->getBoundingBox()->m_points) {
-                    const auto trf = modelView * glm::vec4(v, 1.0f);
+                for(const auto& v: poly->getVertices()) {
+                    const auto trf = modelView * glm::vec4(v.x, v.y, v.z, 1.0f);
                     min.x = std::min(min.x, trf.x);
                     max.x = std::max(max.x, trf.x);
                     min.y = std::min(min.y, trf.y);
@@ -955,6 +958,8 @@ void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
         calculateShadowCastersAABB(scene->getScenes());
     }
 }
+
+
 
 void Renderer::takeSnapshot() {
     // Get the current date and time
