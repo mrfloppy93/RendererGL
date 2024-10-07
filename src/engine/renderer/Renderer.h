@@ -65,7 +65,7 @@ private:
     int previousFBO;
 
     // Shadow Mapping
-    FrameBuffer::Ptr depthMapFBO;
+    std::vector<FrameBuffer::Ptr> depthMapFBOVector;
     DepthTexture3D::Ptr depthMap3D;
     std::vector<float> shadowCascadeLevels;
     int num_cascades;

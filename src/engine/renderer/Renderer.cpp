@@ -75,9 +75,8 @@ void Renderer::initShaders() {
 
     // Depth Map shader program
     Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-    Shader geometryDepthMapShader = Shader::fromFile("glsl/SimpleDepth.geom", Shader::ShaderType::Geometry);
     Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-    shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader, geometryDepthMapShader);
+    shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader);
 
     // HDR shader program
     Shader vertexHDRShader = Shader::fromFile("glsl/HDR.vert", Shader::ShaderType::Vertex);
@@ -427,14 +426,21 @@ void Renderer::initShadowMapping() {
     depthMap3D = DepthTexture3D::New(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, shadowCascadeLevels);
     depthMap3D->bind();
 
-    depthMapFBO = FrameBuffer::New();
-    depthMapFBO->bind();
-    depthMapFBO->to3DTexture(GL_DEPTH_ATTACHMENT, depthMap3D->getID());
+    for(int i = 0; i < num_cascades; ++i) {
 
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
+        depthMapFBOVector.push_back(FrameBuffer::New());
 
-    depthMapFBO->unbind();
+        depthMapFBOVector[i]->bind();
+
+        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthMap3D->getID(), 0, i);
+
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+
+        depthMapFBOVector[i]->unbind();
+    }
+
+    shaderProgramLighting->uniformInt("shadowMap3D", depthMap3D->getID() - 1);
 
     //shaderProgramLighting->uniformInt("shadowMap3D", depthMap3D->getID() - 1);
 }
@@ -508,22 +514,22 @@ void Renderer::renderToDepthMap() {
 
     loadPreviousFBO();
 
+    lightSpaceMatrices = getLightSpaceMatrices();
+
     shaderProgramDepthMap->useProgram();
 
-    depthMapFBO->bind();
-    glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
-
-    lightSpaceMatrices = getLightSpaceMatrices();
     for(int i = 0; i < num_cascades; ++i) {
-        shaderProgramDepthMap->uniformMat4("lightSpaceMatrices[" + std::to_string(i) + "]", lightSpaceMatrices[i]);
+        glViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+        depthMapFBOVector[i]->bind();
+        shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrices[i]);
+
+        // Draw
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        renderScenesToDepthMap(scenes);
+
+        depthMapFBOVector[i]->unbind();
     }
-    shaderProgramDepthMap->uniformInt("cascadeCount", shadowCascadeLevels.size());
-
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    renderScenesToDepthMap(scenes);
-
-    depthMap3D->unbind();
 
     bindPreviousFBO();
 }
@@ -863,7 +869,7 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
 void Renderer::calculateCascadeLevels() {
 
     float lambda = 0.6; // Lambda should be between 0 and 1
-    num_cascades = 5;
+    num_cascades = 3;
 
     for(int i = 1; i < num_cascades; ++i) {
         float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);
