@@ -49,6 +49,10 @@ void Shader::compileShader() {
         shaderID = glCreateShader(GL_FRAGMENT_SHADER);
         debugShader = "Fragment";
         break;
+    case ShaderType::Geometry:
+        shaderID = glCreateShader(GL_GEOMETRY_SHADER);
+        debugShader = "Geometry";
+        break;
     default:
         debugShader = "Not implemented yet";
         break;
@@ -66,8 +70,13 @@ void Shader::compileShader() {
     }
 }
 
-ShaderProgram::ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader) 
+ShaderProgram::ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader)
     : vertexShader(_vertexShader), fragmentShader(_fragmentShader), shaderProgramID(0) {
+    link();
+}
+
+ShaderProgram::ShaderProgram(const Shader& _vertexShader, const Shader& _fragmentShader, const Shader& _geometryShader)
+    : vertexShader(_vertexShader), fragmentShader(_fragmentShader), geometryShader(_geometryShader), shaderProgramID(0) {
     link();
 }
 
@@ -90,6 +99,7 @@ ShaderProgram::~ShaderProgram() {
 ShaderProgram& ShaderProgram::operator=(const ShaderProgram& shaderProgram) {
     vertexShader = shaderProgram.vertexShader;
     fragmentShader = shaderProgram.fragmentShader;
+    geometryShader = shaderProgram.geometryShader;
     shaderProgramID = shaderProgram.shaderProgramID;
     return *this;
 }
@@ -99,6 +109,7 @@ void ShaderProgram::link() {
     shaderProgramID = glCreateProgram();
     glAttachShader(shaderProgramID, vertexShader.getShaderID());
     glAttachShader(shaderProgramID, fragmentShader.getShaderID());
+    glAttachShader(shaderProgramID, geometryShader.getShaderID());
     glLinkProgram(shaderProgramID);
     // Check for linking errors
     int success;
@@ -111,6 +122,7 @@ void ShaderProgram::link() {
     // Delete shaders
     vertexShader.deleteShader();
     fragmentShader.deleteShader();
+    geometryShader.deleteShader();
 }
 
 void ShaderProgram::uniformInt(const std::string& uniform, int value) {

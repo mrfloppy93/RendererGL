@@ -1,16 +1,20 @@
 #include "Renderer.h"
 
 #include <cmath>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #include "TrackballCamera.h"
-
-#define SHADOW_MAP_WIDTH 2048*4
-#define SHADOW_MAP_HEIGHT 2048*4
+#include "engine/group/BBVisuals.h"
 
 #define NEAR_PLANE 0.1
-#define FAR_PLANE 100.0
+#define FAR_PLANE 500
 
-Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight) 
+#define SHADOW_MAP_WIDTH 2048
+#define SHADOW_MAP_HEIGHT 2048
+
+Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     : camera(nullptr), 
     hasCamera(false),
     cameraNearPlane(NEAR_PLANE),
@@ -24,8 +28,9 @@ Renderer::Renderer(unsigned int _viewportWidth, unsigned int _viewportHeight)
     viewportWidth(_viewportWidth), 
     viewportHeight(_viewportHeight),
     shadowLightPos(0, 0, 0), 
-    shadowMapping(false), 
-    exposure(1.0f), 
+    shadowMapping(false),
+    initialized(false),
+    exposure(1.0f),
     hdr(false), 
     gammaCorrection(false), 
     pbr(false), 
@@ -72,12 +77,10 @@ void Renderer::initShaders() {
 
     // Depth Map shader program
     Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
+    //Shader geometryDepthMapShader = Shader::fromFile("glsl/SimpleDepth.geom", Shader::ShaderType::Geometry);
     Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
     shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader);
-
-    /*Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-    Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-    shaderProgramDepthMapCSM = ShaderProgram::New(vertexDepthMapShaderCSM, fragmentDepthMapShaderCSM);*/
+    //shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader, geometryDepthMapShader);
 
     // HDR shader program
     Shader vertexHDRShader = Shader::fromFile("glsl/HDR.vert", Shader::ShaderType::Vertex);
@@ -381,7 +384,7 @@ void Renderer::shadowMappingUniforms() {
     if(!shadowMapping) return;
     depthMap->bind();
     shaderProgramLighting->uniformInt("shadowMap", depthMap->getID() - 1);
-    shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shaderProgramLighting->uniformMat4("lightSpaceMatrix", lightViewMatrix);
     shaderProgramLighting->uniformVec3("lightPos", shadowLightPos);
 }
 
@@ -454,6 +457,7 @@ void Renderer::renderScenesToDepthMap(std::vector<Scene::Ptr>& scenes) {
                 for(auto& group : scene->getGroups()) {
 
                     if(!group->isVisible()) continue;
+                    if(!group->isShadowCaster()) continue;
 
                     for(auto& polytope : group->getPolytopes()) {
                         
@@ -496,22 +500,15 @@ void Renderer::renderToDepthMap() {
     depthMapFBO->bind();
 
     // Shaders
-    lightSpaceMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
+    lightViewMatrix = getLightSpaceMatrix(cameraNearPlane, cameraFarPlane);
 
     shaderProgramDepthMap->useProgram();
-    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shaderProgramDepthMap->uniformMat4("lightSpaceMatrix", lightViewMatrix);
 
     // Draw
     glClear(GL_DEPTH_BUFFER_BIT);
 
     renderScenesToDepthMap(scenes);
-
-    // Save the texture to an image file
-    /*if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, "depth_map.png")) {
-        std::cout << "Image saved successfully!" << std::endl;
-    } else {
-        std::cerr << "Failed to save image." << std::endl;
-    }*/
 
     bindPreviousFBO();
 }
@@ -742,48 +739,12 @@ void Renderer::bindPreviousFBO() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Functions for cascaded shadow mapping
 
-void Renderer::setShadowMappingProcedure(int procedure) {
-    switch (procedure) {
-        // BASE
-        case 0 : {
-            Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);
-            std::cerr << "Switched to BASE" << std::endl;
-            break;
-        }
-        // CSM
-        case 1 : {
-            Shader vertexDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.vert", Shader::ShaderType::Vertex);
-            Shader fragmentDepthMapShaderCSM = Shader::fromFile("glsl/CSMDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShaderCSM,fragmentDepthMapShaderCSM);
-            std::cerr << "Switched to CSM" << std::endl;
-            break;
-        }
-        // PSSM
-        case 2 : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to PSSM" << std::endl;
-            break;
-        }
-        // TSM
-        case 3 : {
-            /*vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-            fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-            shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader,fragmentDepthMapShader);*/
-            std::cerr << "Switched to TSM" << std::endl;
-            break;
-        }
-        default: {
-            setShadowMapping(false);
-            setShadowMappingProcedure(0);
-            break;
-        }
-    }
-}
-
+/**
+ * Create the corner-points of the camera-frustum in world space
+ * @param proj projection matrix
+ * @param view view matrix
+ * @return bounding box of the frustum corners in world space
+ */
 std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view) {
     const auto inv = glm::inverse(proj * view);
 
@@ -801,66 +762,187 @@ std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace(const glm::mat4& pr
             }
         }
     }
-    return frustumCorners;
-}
 
-// get frustum corners from camera-frustum
-std::vector<glm::vec4> Renderer::getFrustumCornersWorldSpace() {
-    return getFrustumCornersWorldSpace(camera->getProjectionMatrix(), camera->getViewMatrix());
+    return frustumCorners;
 }
 
 glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPlane) {
     // Calculate field of view from camera-perspective-matrix
     auto cameraFovy = 2.0f * std::atan(1.0f/camera->getProjectionMatrix()[1][1]);
     const auto proj = glm::perspective(
-        cameraFovy,
-            (float) getViewportWidth()/(float) getViewportHeight(),
+            cameraFovy,
+            static_cast<float>(getViewportWidth())/static_cast<float>(getViewportHeight()),
             nearPlane,
             farPlane);
-    std::vector<glm::vec4> corners = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
-    //calculating lightView-Matrix
-    glm::vec3 center = glm::vec3(0,0,0);
+    std::vector<glm::vec4> splitFrustumW = getFrustumCornersWorldSpace(proj, camera->getViewMatrix());
 
-    for(const auto& v: corners) {
-        center += glm::vec3(v);
-    }
-    center /= corners.size();
-    const auto lightView = glm::lookAt(center + glm::normalize(shadowLightPos), center, glm::vec3(0.0,1.0,0.0));
+    //calculating lightView-Matrix
+    lightViewMatrix = glm::lookAt(glm::normalize(shadowLightPos), glm::vec3(0.0,0.0,0.0), glm::vec3(0.0,1.0,0.0));
 
     //calculating lightProjection-Matrix
-    float minX = std::numeric_limits<float>::max();
-    float maxX = std::numeric_limits<float>::lowest();
-    float minY = std::numeric_limits<float>::max();
-    float maxY = std::numeric_limits<float>::lowest();
-    float minZ = std::numeric_limits<float>::max();
-    float maxZ = std::numeric_limits<float>::lowest();
+    auto min = glm::vec3(std::numeric_limits<float>::max());
+    auto max = glm::vec3(std::numeric_limits<float>::lowest());
 
-    for(const auto& v: corners) {
-        const auto trf = lightView * v;
-        minX = std::min(minX, trf.x);
-        maxX = std::max(maxX, trf.x);
-        minY = std::min(minY, trf.y);
-        maxY = std::max(maxY, trf.y);
-        minZ = std::min(minZ, trf.z);
-        maxZ = std::max(maxZ, trf.z);
+    for(const auto& v: splitFrustumW) {
+        const auto trf = lightViewMatrix * v;
+        min.x = std::min(min.x, trf.x);
+        max.x = std::max(max.x, trf.x);
+        min.y = std::min(min.y, trf.y);
+        max.y = std::max(max.y, trf.y);
+        min.z = std::min(min.z, trf.z);
+        max.z = std::max(max.z, trf.z);
     }
 
     constexpr float zMult = 1.0f;
-    if(minZ < 0) minZ *= zMult;
-    else minZ /= zMult;
-    if(maxZ < 0) maxZ /= zMult;
-    else maxZ *= zMult;
+    if(min.z < 0) min.z *= zMult;
+    else min.z /= zMult;
+    if(max.z < 0) max.z /= zMult;
+    else max.z *= zMult;
 
-    //std::cout << "minX: " << minX << "\tmaxX: " << maxX << std::endl;
-    //std::cout << "minY: " << minY << "\tmaxY: " << maxY << std::endl;
-    //std::cout << "minZ: " << minZ << "\tmaxZ: " << maxZ << std::endl;
+    const auto splitFrustumLightViewSpace = BoundingBox::New(min,max);
 
-    const glm::mat4 lightProjection = glm::ortho(minX,maxX,minY,maxY,minZ,maxZ);
+    const glm::mat4 lightProj = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
 
-    return lightProjection * lightView;
+    return lightProj * lightViewMatrix;
 }
 
+
+/**
+ * calculate the light-space-matrices for each cascade based on the shadow-cascade-levels
+ * @return vector of light-space-matrices for each cascade
+ */
+std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
+    std::vector<glm::mat4> ret;
+    if(shadowCascadeLevels.empty()) {
+        ret.push_back(getLightSpaceMatrix(cameraNearPlane, cameraFarPlane));
+        return ret;
+    }
+    for (size_t i = 0; i <= shadowCascadeLevels.size(); ++i)
+    {
+        if (i == 0)
+        {
+            ret.push_back(getLightSpaceMatrix(cameraNearPlane, shadowCascadeLevels[i]));
+        }
+        else if (i < shadowCascadeLevels.size())
+        {
+            ret.push_back(getLightSpaceMatrix(shadowCascadeLevels[i - 1], shadowCascadeLevels[i]));
+        }
+        else
+        {
+            ret.push_back(getLightSpaceMatrix(shadowCascadeLevels[i - 1], cameraFarPlane));
+        }
+    }
+    return ret;
+}
+
+/**
+ * Calculate the split positions for the cascades based on the camera's near and far plane
+ */
+void Renderer::calculateCascadeLevels() {
+
+    float lambda = 0.6; // Lambda should be between 0 and 1
+    num_cascades = 3;
+
+    for(int i = 1; i < num_cascades; ++i) {
+        float splitPosUni = cameraNearPlane + (cameraFarPlane - cameraNearPlane) * static_cast<float>(i)/static_cast<float>(num_cascades);
+        float splitPosLog = cameraNearPlane * std::powf((cameraFarPlane/cameraNearPlane), static_cast<float>(i)/static_cast<float>(num_cascades));
+        float splitPos = lambda * splitPosUni + (1.0 - lambda) * splitPosLog;
+        shadowCascadeLevels.push_back(splitPos);
+    }
+}
+
+/**
+ * @param splitFrustumLightViewSpace sourcefrustum in light-view-space as bounds for the created boundingbox
+ * @return boundingbox in view-space containing all objects in the scenes that are inside the splitfrustum, cropped by the splitfrustum
+ */
+BoundingBox::Ptr Renderer::createSceneDependentBB(const BoundingBox::Ptr& splitFrustumLightViewSpace) {
+    if(!initialized) {
+        calculateShadowCastersAABB(scenes);
+        initialized = true;
+    }
+
+    BoundingBox::Ptr resultBB = nullptr;
+
+    for(const auto& bb: shadowCastersAABB) {
+        // check whether the object is inside the splitfrustum
+        if(BoundingBox::intersect(splitFrustumLightViewSpace, bb)) {
+            if(resultBB == nullptr) {
+                resultBB = BoundingBox::New(bb->m_vMin, bb->m_vMax);
+            } else {
+                // if so add the bb to a resulting bb
+                resultBB = BoundingBox::merge(resultBB, bb);
+            }
+        }
+    }
+
+    if(resultBB == nullptr) {
+        // if no object is inside the splitfrustum, return the splitfrustum
+        resultBB = splitFrustumLightViewSpace;
+    } else {
+        // crop the resulting bb with the splitfrustum, z-values are expanded to splitfrustum
+        auto min = resultBB->m_vMin;
+        auto max = resultBB->m_vMax;
+
+        min.x = std::max(min.x, splitFrustumLightViewSpace->m_vMin.x);
+        min.y = std::max(min.y, splitFrustumLightViewSpace->m_vMin.y);
+        min.z = splitFrustumLightViewSpace->m_vMin.z;
+
+        max.x = std::min(max.x, splitFrustumLightViewSpace->m_vMax.x);
+        max.y = std::min(max.y, splitFrustumLightViewSpace->m_vMax.y);
+        max.z = splitFrustumLightViewSpace->m_vMax.z;
+
+        resultBB = BoundingBox::New(min,max);
+    }
+
+    // transform the bounding box back to view-space and return it
+    return resultBB;
+}
+
+void Renderer::calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes) {
+
+    for(const auto& scene: scenes)
+    {
+        for(const auto& group: scene->getGroups())
+        {
+            if(!group->isShadowCaster()) continue;
+            for(const auto& poly: group->getPolytopes())
+            {
+
+                // transform objects to light-clip-space and create boundingbox
+                const auto modelView = lightViewMatrix * scene->getModelMatrix() * group->getModelMatrix() * poly->getModelMatrix();
+
+                //calculating light-view-axis-aligned-bounding-box
+                auto min = glm::vec3(std::numeric_limits<float>::max());
+                auto max = glm::vec3(std::numeric_limits<float>::lowest());
+
+                for(const auto& v: poly->getVertices()) {
+                    const auto trf = modelView * glm::vec4(v.x, v.y, v.z, 1.0f);
+                    min.x = std::min(min.x, trf.x);
+                    max.x = std::max(max.x, trf.x);
+                    min.y = std::min(min.y, trf.y);
+                    max.y = std::max(max.y, trf.y);
+                    min.z = std::min(min.z, trf.z);
+                    max.z = std::max(max.z, trf.z);
+                }
+
+                const auto lcsbb = BoundingBox::New(min,max);
+
+                shadowCastersAABB.emplace_back(lcsbb);
+            }
+        }
+    }
+
+    for(const auto& scene: scenes) {
+        calculateShadowCastersAABB(scene->getScenes());
+    }
+}
+
+
+
 void Renderer::takeSnapshot() {
+    // Get the current date and time
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
 
     std::string filename = "depth_map_ssm.png";
     if (depthMap->saveDepthTextureToImage(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, filename.c_str())) {

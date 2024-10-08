@@ -27,9 +27,11 @@
 
 #include "FrameCapturer.h"
 #include "TrackballCamera.h"
+#include "engine/texture/DepthTexture3D.h"
 
 class Renderer {
     GENERATE_PTR(Renderer)
+
 private:
     // Shaders
     ShaderProgram::Ptr shaderProgram;
@@ -65,12 +67,17 @@ private:
     // Shadow Mapping
     FrameBuffer::Ptr depthMapFBO;
     DepthTexture::Ptr depthMap;
+    std::vector<float> shadowCascadeLevels;
+    int num_cascades;
     //FrameBuffer::Ptr depthMapFBOs[];
     //DepthTexture::Ptr depthMaps[];
 
-    glm::mat4 lightSpaceMatrix;
+    glm::mat4 lightViewMatrix;
+    std::vector<glm::mat4> lightSpaceMatrices;
     glm::vec3 shadowLightPos;
     bool shadowMapping;
+    std::vector<BoundingBox::Ptr> shadowCastersAABB; // Shadow casters AABB in light-view-space
+    bool initialized;
 
     // HDR
     FrameBuffer::Ptr hdrFBO;
@@ -135,9 +142,12 @@ private:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Functions for Cascaded Shadow Mapping
-    std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
-    std::vector<glm::vec4> getFrustumCornersWorldSpace();
+    static std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view);
     glm::mat4 getLightSpaceMatrix(float nearPlane, float farPlane);
+    std::vector<glm::mat4> getLightSpaceMatrices();
+    void calculateCascadeLevels();
+    void calculateShadowCastersAABB(std::vector<Scene::Ptr>& scenes);
+    BoundingBox::Ptr createSceneDependentBB(const BoundingBox::Ptr& splitFrustumLightViewSpace);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public:
     void removeScene(Scene::Ptr& scene);
@@ -181,7 +191,9 @@ public:
 
     inline Camera::Ptr getCamera() { return camera; }
     inline float getCameraNearPlane() const { return cameraNearPlane; }
+    inline void setCameraNearPlane(float _nearPlane) { this->cameraNearPlane = _nearPlane; }
     inline float getCameraFarPlane() const { return cameraNearPlane; }
+    inline void setCameraFarPlane(float _farPlane) { this->cameraFarPlane = _farPlane; }
 
     inline void enableLight() { hasLight = true; }
     inline void disableLight() { hasLight = false; } 
@@ -196,12 +208,11 @@ public:
     inline void disablePBR() { pbr = false; }
     inline void setPBREnabled(bool enable) { pbr = enable; }
 
-    inline void setShadowLightPos(const glm::vec3& shadowLightPos) { this->shadowLightPos = shadowLightPos; }
+    inline void setShadowLightPos(const glm::vec3& shadowLightPos) { this->shadowLightPos = shadowLightPos; initialized = false; }
     inline glm::vec3& getShadowLightPos() { return shadowLightPos; }
 
     inline void setShadowMapping(bool shadowMapping) { this->shadowMapping = shadowMapping; }
     inline bool isShadowMapping() const { return shadowMapping; }
-    void setShadowMappingProcedure(int);    // setting the shaders for different procedures 0:simple shadow mapping 1:cascaded shadow mapping 2:Parallel Split Shadow Mappint 3: Trapezoid Shadow Mapping
 
     inline ShaderProgram::Ptr& getShaderProgram() { return shaderProgram; }
 
@@ -215,7 +226,7 @@ public:
     inline void setViewportHeight(unsigned int viewportHeight) { this->viewportHeight = viewportHeight; }
     inline unsigned int getViewportHeight() const { return viewportHeight; }
 
-    inline DepthTexture::Ptr& getDepthMap() { return depthMap; }
+    inline DepthTexture::Ptr& getDepthMaps() { return depthMap; }
 
     inline void setHDR(bool hdr) { this->hdr = hdr; }
     inline bool isHDR() const { return hdr; }

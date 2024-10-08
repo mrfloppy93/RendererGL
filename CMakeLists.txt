@@ -58,10 +58,14 @@ add_subdirectory(src)
 
 # Copy shaders into build folder
 set(SHADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/engine/opengl/glsl")
-file(GLOB shaderFiles ${SHADERS_PATH}/*.frag ${SHADERS_PATH}/*.vert)
+file(GLOB shaderFiles ${SHADERS_PATH}/*.frag ${SHADERS_PATH}/*.vert ${SHADERS_PATH}/*.geom)
 foreach(filename ${shaderFiles} )
     file(COPY ${filename} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/glsl)
 endforeach()
 
 # Add tests
 add_subdirectory(test)
+
+# Set Profiler Settings
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")

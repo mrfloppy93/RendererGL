@@ -10,6 +10,7 @@ class Scene {
 private:
     std::vector<Group::Ptr> groups;
     std::vector<Scene::Ptr> scenes;
+    BoundingBox::Ptr boundingBox;
     glm::mat4 modelMatrix;
     bool visible;
 public:

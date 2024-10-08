@@ -25,6 +25,7 @@ Polytope::Polytope(const Polytope& polytope)
     vertexLength(polytope.vertexLength), indicesLength(polytope.indicesLength), material(polytope.material),
     modelMatrix(polytope.modelMatrix), selected(polytope.selected), faceCulling(polytope.faceCulling),
     emissionStrength(polytope.emissionStrength), tangentAndBitangents(polytope.tangentAndBitangents) {
+    //initBoundingBox();
 }
 
 Polytope::Polytope(Polytope&& polytope) noexcept 
@@ -33,6 +34,7 @@ Polytope::Polytope(Polytope&& polytope) noexcept
     material(std::move(polytope.material)), modelMatrix(std::move(polytope.modelMatrix)), selected(polytope.selected),
     faceCulling(polytope.faceCulling), emissionStrength(polytope.emissionStrength),
     tangentAndBitangents(polytope.tangentAndBitangents) {
+    //initBoundingBox();
 }
 
 void Polytope::setTangentsAndBitangents(Vec3f& vertex0, Vec3f& vertex1, Vec3f& vertex2) {
@@ -102,6 +104,7 @@ void Polytope::initPolytope(std::vector<Vec3f>& vertices) {
     vertexBuffer = VertexBuffer::New(vertices);
     material = PhongMaterial::New(MATERIAL_DIFFUSE, MATERIAL_SPECULAR, MATERIAL_SHININESS);
     unbind();
+    //initBoundingBox();
 }
 
 void Polytope::initPolytope(std::vector<Vec3f>& vertices, std::vector<unsigned int>& indices) {
@@ -110,6 +113,7 @@ void Polytope::initPolytope(std::vector<Vec3f>& vertices, std::vector<unsigned i
     vertexBuffer = VertexBuffer::New(vertices, indices);
     material = PhongMaterial::New(MATERIAL_DIFFUSE, MATERIAL_SPECULAR, MATERIAL_SHININESS);
     unbind();
+    //initBoundingBox();
 }
 
 void Polytope::bind() {
@@ -126,12 +130,14 @@ void Polytope::updateVertices(std::vector<Vec3f>& vertices) {
     if(vertexBuffer != nullptr) {
         vertexBuffer->updateVertices(vertices);
         vertexLength = vertices.size();
+        //initBoundingBox();
     }
 }
 
 void Polytope::updateVertex(int pos, Vec3f newVertex) {
     if(vertexBuffer != nullptr)
         vertexBuffer->updateVertex(pos, newVertex);
+    //initBoundingBox();
 }
 
 void Polytope::updateIndices(std::vector<unsigned int>& indices) {
@@ -159,4 +165,8 @@ void Polytope::draw(unsigned int primitive, bool showWire) {
     if(!vertexBuffer->HasIndexBuffer()) glDrawArrays(primitive, 0, vertexLength);
     else    glDrawElements(primitive, indicesLength, GL_UNSIGNED_INT, 0);
     unbind();
+}
+
+void Polytope::initBoundingBox() {
+    boundingBox = BoundingBox::New(getVertices());
 }

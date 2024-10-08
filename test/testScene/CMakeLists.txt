@@ -36,10 +36,14 @@ set(SOURCES
 
 # Copy shaders into build folder
 set(SHADERS_PATH "${CMAKE_SOURCE_DIR}/src/engine/opengl/glsl")
-file(GLOB shaderFiles ${SHADERS_PATH}/*.frag ${SHADERS_PATH}/*.vert)
+file(GLOB shaderFiles ${SHADERS_PATH}/*.frag ${SHADERS_PATH}/*.vert ${SHADERS_PATH}/*.geom)
 foreach(filename ${shaderFiles} )
     file(COPY ${filename} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/glsl)
 endforeach()
+
+# Copy .obj files into build folder
+file(COPY ${CMAKE_SOURCE_DIR}/models/OBJ/dog.obj DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/obj)
+file(COPY ${CMAKE_SOURCE_DIR}/models/OBJ/platform.obj DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/obj)
 
 # Executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${IMGUI_SOURCES} ${IMGUI_HEADERS})
