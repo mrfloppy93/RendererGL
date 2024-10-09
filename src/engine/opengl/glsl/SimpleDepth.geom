@@ -1,6 +1,6 @@
 #version 450 core
 
-#define MAX_CASCADES 3
+#define MAX_CASCADES 30
 
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3 * MAX_CASCADES) out;
