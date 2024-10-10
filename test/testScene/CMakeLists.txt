@@ -43,6 +43,7 @@ endforeach()
 
 # Copy .obj files into build folder
 file(COPY ${CMAKE_SOURCE_DIR}/models/OBJ/dog.obj DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/obj)
+file(COPY ${CMAKE_SOURCE_DIR}/models/OBJ/wizard.obj DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/obj)
 file(COPY ${CMAKE_SOURCE_DIR}/models/OBJ/platform.obj DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/obj)
 
 # Executable

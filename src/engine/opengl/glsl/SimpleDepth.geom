@@ -1,6 +1,6 @@
 #version 450 core
 
-layout(triangles, invocations = 30) in;
+layout(triangles, invocations = 3) in;
 layout(triangle_strip, max_vertices = 3) out;
 
 uniform mat4 lightSpaceMatrices[16];
