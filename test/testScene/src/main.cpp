@@ -163,10 +163,7 @@ int main(int argc, char** argv) {
                 if(x != 0) translateX = x%2==0 ? -x * multX : (x+1) * multX;
                 translateX -= 1.2;
 
-                float translateY = 0;
-                float multY = 1.1; //+ z * .2;
-                if(y != 0) translateY = y%2==0 ? -y * multY : (y+1) * multY;
-
+                float translateY = y * 2;
                 float translateZ = -27 + z * 5;
 
                 object->translate(glm::vec3(translateX, translateY, translateZ));
