@@ -95,8 +95,8 @@ void logAverageFrameTime(const std::string& inputLogFile) {
 
 int main(int argc, char** argv) {
 
-    if(argc < 3) {
-        std::cout << "Please provide the number of rows and columns for the grid." << std::endl;
+    if(argc < 4) {
+        std::cout << "Please provide the number of objects in x,y,z direction for the grid." << std::endl;
         return -1;
     }
 
@@ -146,27 +146,33 @@ int main(int argc, char** argv) {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = std::stoi(argv[1]);
-    const int max_cols = std::stoi(argv[2]);
+    const int max_x = std::stoi(argv[1]);
+    const int max_y = std::stoi(argv[2]);
+    const int max_z = std::stoi(argv[3]);
 
-    std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
-    for(int row = 0; row < max_rows; row++) {
-        for(int col = 0; col < max_cols; col++) {
-            const auto obj = Model::New("obj/dog.obj");
-            objects.emplace_back(obj->getPolytopes()[0]);
-            int index = col + row * max_cols;
-            objects[index]->setFaceCulling(Polytope::FaceCulling::BACK);
-            //objects[index]->rotate(180.0, glm::vec3(0.0,1.0,0.0));
-            objects[index]->scale(glm::vec3(.4));
-            float translateX = 0;
-            float translateZ = -250 + col * 80;
-            float multX = 15 + col * 5;
-            if(row != 0) translateX = row%2==0 ? -row * multX : (row+1) * multX;
-            translateX -= 15;
-            objects[index]->translate(glm::vec3(translateX, 0, translateZ));
+    for(int x = 0; x < max_x; x++) {
+        for(int y = 0; y < max_y; y++) {
+            for(int z = 0; z < max_z; z++) {
+                const auto obj = Model::New("obj/wizard.obj");
+                auto object = obj->getPolytopes()[0];
+                object->setFaceCulling(Polytope::FaceCulling::BACK);
+                object->scale(glm::vec3(4));
+                float translateX = 0;
+                float multX = 1.1 + z * .2;
+                if(x != 0) translateX = x%2==0 ? -x * multX : (x+1) * multX;
+                translateX -= 1.2;
 
-            objectGroup->add(objects[index]);
+                float translateY = 0;
+                float multY = 1.1; //+ z * .2;
+                if(y != 0) translateY = y%2==0 ? -y * multY : (y+1) * multY;
+
+                float translateZ = -27 + z * 5;
+
+                object->translate(glm::vec3(translateX, translateY, translateZ));
+                object->rotate(180.0, glm::vec3(0.0,1.0,0.0));
+                objectGroup->add(object);
+            }
         }
     }
 
