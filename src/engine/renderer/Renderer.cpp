@@ -77,10 +77,10 @@ void Renderer::initShaders() {
 
     // Depth Map shader program
     Shader vertexDepthMapShader = Shader::fromFile("glsl/SimpleDepth.vert", Shader::ShaderType::Vertex);
-    Shader geometryDepthMapShader = Shader::fromFile("glsl/SimpleDepth.geom", Shader::ShaderType::Geometry);
+    //Shader geometryDepthMapShader = Shader::fromFile("glsl/SimpleDepth.geom", Shader::ShaderType::Geometry);
     Shader fragmentDepthMapShader = Shader::fromFile("glsl/SimpleDepth.frag", Shader::ShaderType::Fragment);
-    //shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader);
-    shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader, geometryDepthMapShader);
+    shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader);
+    //shaderProgramDepthMap = ShaderProgram::New(vertexDepthMapShader, fragmentDepthMapShader, geometryDepthMapShader);
 
     // HDR shader program
     Shader vertexHDRShader = Shader::fromFile("glsl/HDR.vert", Shader::ShaderType::Vertex);
@@ -793,7 +793,7 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
         max.z = std::max(max.z, trf.z);
     }
 
-    constexpr float zMult = 1.0f;
+    constexpr float zMult = 10.0f;
     if(min.z < 0) min.z *= zMult;
     else min.z /= zMult;
     if(max.z < 0) max.z /= zMult;
@@ -803,7 +803,13 @@ glm::mat4 Renderer::getLightSpaceMatrix(const float nearPlane, const float farPl
 
     const glm::mat4 lightProj = glm::ortho(min.x,max.x,min.y,max.y,min.z,max.z);
 
-    return lightProj * lightViewMatrix;
+    // create boundingbox of objects contained in the lights-shadow-frustum
+    const auto splitFrustumSceneDependent = createSceneDependentBB(splitFrustumLightViewSpace);
+    // recreate the lights-projection-matrix with the new bounds
+    const auto lightProjNew = glm::ortho(splitFrustumSceneDependent->m_vMin.x, splitFrustumSceneDependent->m_vMax.x,
+                                         splitFrustumSceneDependent->m_vMin.y, splitFrustumSceneDependent->m_vMax.y,
+                                         splitFrustumSceneDependent->m_vMin.z, splitFrustumSceneDependent->m_vMax.z);
+    return lightProjNew * lightViewMatrix;
 }
 
 
@@ -840,7 +846,7 @@ std::vector<glm::mat4> Renderer::getLightSpaceMatrices() {
  */
 void Renderer::calculateCascadeLevels() {
 
-    float lambda = 0.6; // Lambda should be between 0 and 1
+    float lambda = 0.8; // Lambda should be between 0 and 1
     num_cascades = 3;
 
     for(int i = 1; i < num_cascades; ++i) {

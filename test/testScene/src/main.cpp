@@ -95,8 +95,8 @@ void logAverageFrameTime(const std::string& inputLogFile) {
 
 int main(int argc, char** argv) {
 
-    if(argc < 3) {
-        std::cout << "Please provide the number of rows and columns for the grid." << std::endl;
+    if(argc < 4) {
+        std::cout << "Please provide the number of objects in x,y,z direction for the grid." << std::endl;
         return -1;
     }
 
@@ -133,6 +133,27 @@ int main(int argc, char** argv) {
     camera->zoom(-180.0);
     camera->rotate(0.0, 1.3);
 
+    /*TrackballCamera::Ptr camera = TrackballCamera::orthoCamera(0, 80, -10, 70, NEAR_PLANE, FAR_PLANE);
+    float x = 200.0;
+    float y = 80.0;
+    float z = 100.0;
+
+    // Step 1: Calculate radius (magnitude of the vector), then make it negative
+    float radius = -sqrt(x * x + y * y + z * z); // Negative radius
+
+    // Step 2: Calculate phi (the angle with the y-axis)
+    float phi = acos(y / std::abs(radius)); // Use abs(radius) to get the correct angle
+
+    // Step 3: Calculate theta (the angle in the x-z plane)
+    float theta = atan2(x, z);
+
+    if (radius < 0) {
+        theta += glm::pi<float>(); // Add 180 degrees (pi radians) to flip the direction
+    }
+
+    camera->zoom(radius);
+    camera->rotate(theta, phi);*/
+
     renderer->setCamera(std::dynamic_pointer_cast<Camera>(camera));
 
     // Scene
@@ -146,29 +167,57 @@ int main(int argc, char** argv) {
     terrain->add(groundPoly);
 
     // Loop for creating lots of dogs to increase load
-    const int max_rows = std::stoi(argv[1]);
-    const int max_cols = std::stoi(argv[2]);
+    const int max_x = std::stoi(argv[1]);
+    const int max_y = std::stoi(argv[2]);
+    const int max_z = std::stoi(argv[3]);
 
-    std::vector<Polytope::Ptr> objects;
     Group::Ptr objectGroup = Group::New();
-    for(int row = 0; row < max_rows; row++) {
-        for(int col = 0; col < max_cols; col++) {
-            const auto obj = Model::New("obj/dog.obj");
-            objects.emplace_back(obj->getPolytopes()[0]);
-            int index = col + row * max_cols;
-            objects[index]->setFaceCulling(Polytope::FaceCulling::BACK);
-            //objects[index]->rotate(180.0, glm::vec3(0.0,1.0,0.0));
-            objects[index]->scale(glm::vec3(.4));
-            float translateX = 0;
-            float translateZ = -250 + col * 80;
-            float multX = 15 + col * 5;
-            if(row != 0) translateX = row%2==0 ? -row * multX : (row+1) * multX;
-            translateX -= 15;
-            objects[index]->translate(glm::vec3(translateX, 0, translateZ));
+    /*for(int x = 0; x < max_x; x++) {
+        for(int y = 0; y < max_y; y++) {
+            for(int z = 0; z < max_z; z++) {
+                const auto obj = Model::New("obj/wizard.obj");
+                auto object = obj->getPolytopes()[0];
+                object->setFaceCulling(Polytope::FaceCulling::BACK);
+                object->scale(glm::vec3(4));
+                float translateX = 0;
+                float multX = 1.1 + z * .2;
+                if(x != 0) translateX = x%2==0 ? -x * multX : (x+1) * multX;
+                translateX -= 1.2;
 
-            objectGroup->add(objects[index]);
+                float translateY = y * 2;
+                float translateZ = -27 + z * 5;
+
+                object->translate(glm::vec3(translateX, translateY, translateZ));
+                object->rotate(180.0, glm::vec3(0.0,1.0,0.0));
+                objectGroup->add(object);
+            }
         }
-    }
+    }*/
+
+    const auto obj = Model::New("obj/wizard.obj");
+    auto object = obj->getPolytopes()[0];
+    object->setFaceCulling(Polytope::FaceCulling::BACK);
+    object->scale(glm::vec3(30));
+    object->rotate(180.0, glm::vec3(0.0,1.0,0.0));
+    objectGroup->add(object);
+
+    const auto obj2 = Model::New("obj/wizard.obj");
+    auto object2 = obj2->getPolytopes()[0];
+    object2->setFaceCulling(Polytope::FaceCulling::BACK);
+    object2->scale(glm::vec3(20));
+    object2->rotate(180.0, glm::vec3(0.0,1.0,0.0));
+    object2->translate(glm::vec3(-2, 0, -1));
+    objectGroup->add(object2);
+
+    const auto obj3 = Model::New("obj/wizard.obj");
+    auto object3 = obj3->getPolytopes()[0];
+    object3->setFaceCulling(Polytope::FaceCulling::BACK);
+    object3->scale(glm::vec3(10));
+    object3->rotate(180.0, glm::vec3(0.0,1.0,0.0));
+    object3->translate(glm::vec3(5, 0, 3));
+    objectGroup->add(object3);
+
+    objectGroup->translate(glm::vec3(0, 0, -50));
 
     Scene::Ptr scene = Scene::New();
     scene->addGroup(terrain);
